@@ -21,7 +21,8 @@
             "label": "delete old objects",
             "command": "/bin/rm",
             "args": [
-                "${fileDirname}/*.out"
+                "-f",
+                "${fileDirname}/*.out",
             ],
             "options": {
                 "cwd": "${fileDirname}"

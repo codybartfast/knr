@@ -1,3 +1,6 @@
+.vscode
+
+# Github ignores for C:
 # Prerequisites
 *.d
 

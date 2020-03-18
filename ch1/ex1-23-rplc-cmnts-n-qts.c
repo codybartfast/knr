@@ -43,13 +43,13 @@ This is so it can be used as part of the solution to Exercise 1-24
 #define CMNT_REMOVE 4
 /* this comment becomes --> */
 
-int cmnt_policy;
-char cmntd_rplcmnnt;
-int do_rplc_dblqtd;
-char dblqtd_rplcmnt;
-int do_rplc_snglqtd;
-char snglqtd_rplcmnt;
-int do_rpt_errors;
+int cmnt_policy = CMNT_REMOVE;
+char cmntd_rplcmnnt = ' ';
+int do_rplc_dblqtd = NO;
+char dblqtd_rplcmnt = ' ';
+int do_rplc_snglqtd = NO;
+char snglqtd_rplcmnt = ' ';
+int do_rpt_errors = YES;
 
 void next(int mode);
 void parse(int mode, char c);
@@ -58,23 +58,7 @@ void put_dbl_qtd_char(char c);
 void put_sngl_qtd_char(char c);
 void report_eof_status(int mode);
 
-int main () {
-    extern int cmnt_policy;
-    extern char cmntd_rplcmnnt;
-    extern int do_rplc_dblqtd;
-    extern char dblqtd_rplcmnt;
-    extern int do_rplc_snglqtd;
-    extern char snglqtd_rplcmnt;
-    extern int do_rpt_errors;
-
-    cmnt_policy = CMNT_REMOVE;
-    do_rplc_dblqtd = NO;
-    do_rplc_snglqtd = NO;
-    do_rpt_errors = YES;
-    cmntd_rplcmnnt = ' ';
-    dblqtd_rplcmnt = ' ';
-    snglqtd_rplcmnt = ' ';
-
+int main (void) {
     next(MD_IN_CODE);
     return 0;
 }

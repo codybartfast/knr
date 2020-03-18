@@ -16,27 +16,31 @@ with spaces, together they can be used like this:
     cat source.c | ex23replace | ex24
 
 E.g., if tags are properly nested/balanced:
-*/
-//      ch1> cat source1.c
-//        [{  ([{(   /*]**/   ']'   '\''   "\""   "]"   )}])  }]
-//      ch1> cat source1.c | ex23replace
-//        [{  ([{(   /*  */   ' '   '  '   "  "   " "   )}])  }]
-//      ch1> cat source1.c | ex23replace | ex24
-//      Shiny! no issues discovered :-)
-//      ch1>
-//
-//  and if the tags are not properly nested/balanced (first two swapped):
-//
-//      ch1> cat source2.c
-//        {[  ([{(   /*]**/   ']'   '\''   "\""   "]"   )}])  }]
-//      ch1> cat source2.c | ex23replace
-//        {[  ([{(   /*  */   ' '   '  '   "  "   " "   )}])  }]
-//      ch1> cat source2.c | ex23replace | ex24
-//      Error: expected ']' but got '}' [line:1, col:55]
-//      ch1>
-/*
-    The contents of comments are replaced (instead of removing the comments)
-    to prevent the line and column values changing.
+
+    ch1> cat source1.c
+      [{  ([{(   /∗]∗∗/   ']'   '\''   "\""   "]"   )}])  }]
+    ch1> cat source1.c | ex23replace
+      [{  ([{(   /∗  ∗/   ' '   '  '   "  "   " "   )}])  }]
+    ch1> cat source1.c | ex23replace | ex24
+    Shiny! no issues discovered :-)
+    ch1>
+
+(Asterisks '*' have been replaced with the unicode asterisk operator
+symbol '∗'.)
+
+and if the tags are not properly nested/balanced (first two swapped):
+
+    ch1> cat source2.c
+      {[  ([{(   /∗]∗∗/   ']'   '\''   "\""   "]"   )}])  }]
+    ch1> cat source2.c | ex23replace
+      {[  ([{(   /∗  ∗/   ' '   '  '   "  "   " "   )}])  }]
+    ch1> cat source2.c | ex23replace | ex24
+    Error: expected ']' but got '}' [line:1, col:55]
+    ch1>
+
+The contents of comments are replaced (instead of removing the comments)
+to prevent the line and column values changing.
+
 */
 
 #include <stdio.h>
@@ -45,8 +49,8 @@ E.g., if tags are properly nested/balanced:
 #define CONTINUE 2
 #define STOP 3
 
-int line;
-int col;
+int line = 1;
+int col = 0;
 
 int next(char exptag);
 int parse(char exptag, char c);
@@ -54,9 +58,7 @@ int open_tag(char prevexptag, char closetag);
 int check_closing_tag(char exptag, char acttag);
 void report_eof_status(char exptag);
 
-int main () {
-    line = 1;
-    col = 0;
+int main (void) {
     next(NOTAG);
     return 0;
 }
@@ -70,20 +72,20 @@ int next(char exptag) {
     }
     else if (c == '\n') { ++line; col = 0; }
     else { ++col; }
-    parse(exptag, c);
+    return parse(exptag, c);
 }
 
 int parse(char exptag, char c) {
     if (c == '(')
-        open_tag(exptag, ')');
+        return open_tag(exptag, ')');
     else if (c == '[')
-        open_tag(exptag, ']');
+        return open_tag(exptag, ']');
     else if (c == '{')
-        open_tag(exptag, '}');
+        return open_tag(exptag, '}');
     else if (c == ')' || c == ']' || c == '}')
-        check_closing_tag(exptag, c);
+        return check_closing_tag(exptag, c);
     else
-        next(exptag);
+        return next(exptag);
 }
 
 int open_tag(char prevexptag, char closetag) {

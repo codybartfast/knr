@@ -5,6 +5,13 @@
             "label": "gcc build active file",
             "command": "/usr/bin/gcc",
             "args": [
+                "-Wall",        // enable all compiler warnings
+                "-Wextra",      // warn if legit but possibly mistaken
+                "-std=c89",     // "ANSI C"
+                "-pedantic",    // warn if it is optionally supported
+                "-Wmissing-prototypes",     // function declarations
+                "-Wstrict-prototypes",      // "specified argument types"
+                "-Wold-style-definition",   // don't support K&R fun dec/def
                 "${file}"
             ],
             "options": {

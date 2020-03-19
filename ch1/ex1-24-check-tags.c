@@ -1,10 +1,8 @@
 /*
-
 Write a program to check a C program for rudimentary syntax errors like
 unbalanced parenthesis, brackets and braces.  Don't forget about quotes,
 both single and double, escape sequences and comments.  (This program is
 hard if you do it in full generality.)
-
 */
 
 /*
@@ -13,34 +11,33 @@ the contents of comments and quotes can be ignored.  However, a modified
 version of exercise 1-23 can replace the contents of comments and quotes
 with spaces, together they can be used like this:
 
-    cat source.c | ex23replace | ex24
+	cat source.c | ex23replace | ex24
 
 E.g., if tags are properly nested/balanced:
 
-    ch1> cat source1.c
-      [{  ([{(   /∗]∗∗/   ']'   '\''   "\""   "]"   )}])  }]
-    ch1> cat source1.c | ex23replace
-      [{  ([{(   /∗  ∗/   ' '   '  '   "  "   " "   )}])  }]
-    ch1> cat source1.c | ex23replace | ex24
-    Shiny! no issues discovered :-)
-    ch1>
+	ch1> cat source1.c
+	  [{  ([{(   /∗]∗∗/   ']'   '\''   "\""   "]"   )}])  }]
+	ch1> cat source1.c | ex23replace
+	  [{  ([{(   /∗  ∗/   ' '   '  '   "  "   " "   )}])  }]
+	ch1> cat source1.c | ex23replace | ex24
+	Shiny! no issues discovered :-)
+	ch1>
 
 (Asterisks '*' have been replaced with the unicode asterisk operator
 symbol '∗'.)
 
 and if the tags are not properly nested/balanced (first two swapped):
 
-    ch1> cat source2.c
-      {[  ([{(   /∗]∗∗/   ']'   '\''   "\""   "]"   )}])  }]
-    ch1> cat source2.c | ex23replace
-      {[  ([{(   /∗  ∗/   ' '   '  '   "  "   " "   )}])  }]
-    ch1> cat source2.c | ex23replace | ex24
-    Error: expected ']' but got '}' [line:1, col:55]
-    ch1>
+	ch1> cat source2.c
+	  {[  ([{(   /∗]∗∗/   ']'   '\''   "\""   "]"   )}])  }]
+	ch1> cat source2.c | ex23replace
+	  {[  ([{(   /∗  ∗/   ' '   '  '   "  "   " "   )}])  }]
+	ch1> cat source2.c | ex23replace | ex24
+	Error: expected ']' but got '}' [line:1, col:55]
+	ch1>
 
 The contents of comments are replaced (instead of removing the comments)
 to prevent the line and column values changing.
-
 */
 
 #include <stdio.h>
@@ -58,58 +55,67 @@ int open_tag(char prevexptag, char closetag);
 int check_closing_tag(char exptag, char acttag);
 void report_eof_status(char exptag);
 
-int main (void) {
-    next(NOTAG);
-    return 0;
+int main(void)
+{
+	next(NOTAG);
+	return 0;
 }
 
-int next(char exptag) {
-    int c;
+int next(char exptag)
+{
+	int c;
 
-    if((c = getchar()) == EOF) {
-        report_eof_status(exptag);
-        return STOP;
-    }
-    else if (c == '\n') { ++line; col = 0; }
-    else { ++col; }
-    return parse(exptag, c);
+	if ((c = getchar()) == EOF) {
+		report_eof_status(exptag);
+		return STOP;
+	} else if (c == '\n') {
+		++line;
+		col = 0;
+	} else {
+		++col;
+	}
+	return parse(exptag, c);
 }
 
-int parse(char exptag, char c) {
-    if (c == '(')
-        return open_tag(exptag, ')');
-    else if (c == '[')
-        return open_tag(exptag, ']');
-    else if (c == '{')
-        return open_tag(exptag, '}');
-    else if (c == ')' || c == ']' || c == '}')
-        return check_closing_tag(exptag, c);
-    else
-        return next(exptag);
+int parse(char exptag, char c)
+{
+	if (c == '(')
+		return open_tag(exptag, ')');
+	else if (c == '[')
+		return open_tag(exptag, ']');
+	else if (c == '{')
+		return open_tag(exptag, '}');
+	else if (c == ')' || c == ']' || c == '}')
+		return check_closing_tag(exptag, c);
+	else
+		return next(exptag);
 }
 
-int open_tag(char prevexptag, char closetag) {
-    if (next(closetag) != STOP)
-        return next(prevexptag);
-    return STOP;
+int open_tag(char prevexptag, char closetag)
+{
+	if (next(closetag) != STOP)
+		return next(prevexptag);
+	return STOP;
 }
 
-int check_closing_tag(char exptag, char acttag) {
-    if (exptag == acttag)
-        return CONTINUE;
+int check_closing_tag(char exptag, char acttag)
+{
+	if (exptag == acttag)
+		return CONTINUE;
 
-    if (exptag == NOTAG)
-        printf("Error: '%c' was unexpected", acttag);
-    else
-        printf("Error: expected '%c' but got '%c'", exptag, acttag);
-    printf(" [line:%d, col:%d]\n", line, col);
-    return STOP;
+	if (exptag == NOTAG)
+		printf("Error: '%c' was unexpected", acttag);
+	else
+		printf("Error: expected '%c' but got '%c'", exptag, acttag);
+	printf(" [line:%d, col:%d]\n", line, col);
+	return STOP;
 }
 
-void report_eof_status(char exptag) {
-    if (exptag == NOTAG)
-        printf("Shiny! no issues discovered :-)");
-    else
-        printf("Error: expected '%c', but at end of file.", exptag);
-    putchar('\n');
+void report_eof_status(char exptag)
+{
+	if (exptag == NOTAG)
+		printf("Shiny! no issues discovered :-)");
+	else
+		printf("Error: expected '%c', but at end of file.", exptag);
+	putchar('\n');
 }

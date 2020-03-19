@@ -32,10 +32,10 @@ This is so it can be used as part of the solution to Exercise 1-24.
 #define YES 1
 
 #define CMNT_INCLUDE 2
-/* this comment becomes --> */ /* this comment becomes --> */
+/* this comment becomes --> */		/* this comment becomes --> */
 
 #define CMNT_REPLACE 3
-/* this comment becomes --> */ /*                          */
+/* this comment becomes --> */ 		/*                          */
 
 #define CMNT_REMOVE 4
 /* this comment becomes --> */

@@ -1,0 +1,48 @@
+Behaviour:
+
+unsigned char
+=============
+          val: 128
+        2*val: 256  	<-- nonzero
+    val=2*val: 0
+
+unsigned short
+==============
+          val: 32768
+        2*val: 65536	<-- nonzero
+    val=2*val: 0
+
+unsigned int
+============
+          val: 2147483648
+        2*val: 0	<-- zero
+    val=2*val: 0
+
+unsigned long
+=============
+          val: 9223372036854775808
+        2*val: 0	<-- zero
+    val=2*val: 0
+
+
+Although I didn't anticipate it, I can see that if the integer length is
+less than the word length then there could still be a correct (non-overflow)
+answer that could be assigned to a longer int, so:
+
+	int = short * short
+
+is valid and useful.  However, if the integer length is greater or equal to
+the word length than we can expect overflow as with 2 * 9223372036854775808.
+
+But that logic would suggest:
+
+	long = int * int
+
+shouldn't overflow on 64b machine (where long=64, int=32).  But it does.
+
+1)	To prevent too much undefined or machine specific behaviour, did the 32b
+	behaviour become a de-facto (gcc?) or a de-juro (C90?) standard?  Or is
+	there a completely different explanation?
+
+2)	Is there a specific name for the "truncate on assignment" behaviour that
+	makes 2*short different from short=2*short?

@@ -26,17 +26,17 @@ enum { OK, ERROR };
 
 unsigned long int buffsize;
 char *buff, *buffptr, *bufflimit;
-long linessize;
+long tailsize;
 char **lines, **first, **line, **lineslimit;
 
 int readlines(void);
 void writelines(void);
 void initialize(void);
-long getreqstd(int argc, char **argv);
+long gettailsize(int argc, char **argv);
 
 int main(int argc, char **argv)
 {
-	linessize = getreqstd(argc, argv) + 1;
+	tailsize = gettailsize(argc, argv) + 1;
 	buffsize = INITIAL_BUFFSIZE;
 	initialize();
 
@@ -92,13 +92,13 @@ void initialize(void)
 	buff = (char *)malloc(buffsize * sizeof(char));
 	buffptr = buff;
 	bufflimit = buff + buffsize;
-	lines = (char **)malloc(linessize * sizeof(char *));
+	lines = (char **)malloc(tailsize * sizeof(char *));
 	first = line = lines;
-	lineslimit = lines + linessize;
+	lineslimit = lines + tailsize;
 	*line = buffptr;
 }
 
-long getreqstd(int argc, char **argv)
+long gettailsize(int argc, char **argv)
 {
 	if (argc == 2 && *argv[1] == '-') {
 		char c, *ptr;

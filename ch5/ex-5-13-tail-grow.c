@@ -16,10 +16,11 @@
 
 #include <ctype.h>
 #include <limits.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 
-#define INITIAL_BUFFSIZE (18)
+#define INITIAL_BUFFSIZE (1 << 10)
 #define REQSTD_DEFAULT 10
 
 enum { OK, ERROR };
@@ -27,44 +28,41 @@ enum { OK, ERROR };
 unsigned long int buffsize;
 unsigned long int maxbuffsize = ULONG_MAX;
 char *buff, *buffptr, *bufflimit;
-long linessize;
+long tailsize;
 char **lines, **first, **line, **lineslimit;
 
 int readlines(void);
 void writelines(void);
-void initialize(void);
+void init_buff(unsigned long);
 int growbuff(void);
-long getreqstd(int argc, char **argv);
+long gettailsize(int argc, char **argv);
 
 int main(int argc, char **argv)
 {
-	linessize = getreqstd(argc, argv) + 1;
-	buffsize = INITIAL_BUFFSIZE;
-	initialize();
+	if ((tailsize = gettailsize(argc, argv)) == 0)
+		return 0;
+	init_buff(INITIAL_BUFFSIZE);
+	lines = (char **)malloc(tailsize * sizeof(char *));
+	lineslimit = lines + tailsize;
+	first = line = lines;
+	*lines = buff;
 
 	if (readlines() == OK)
 		writelines();
 
-	/* 	free(lines);
-	free(buff); */
+	free(lines);
+	free(buff);
 	return 0;
 }
 
 int readlines(void)
 {
 	char c;
+	int afternl = 0;
 
 	while ((c = getchar()) != EOF) {
 		*buffptr = c;
-		buffptr++;
-		if (buffptr == bufflimit)
-			buffptr = buff;
-		if (buffptr == *first) {
-			if (growbuff() != OK) {
-				return 1;
-			}
-		}
-		if (c == '\n') {
+		if (afternl) {
 			if (++line == lineslimit)
 				line = lines;
 			if (line == first)
@@ -72,8 +70,15 @@ int readlines(void)
 					first = lines;
 			*line = buffptr;
 		}
+		if (buffptr++ == bufflimit)
+			buffptr = buff;
+		if (buffptr == *first) {
+			if (growbuff() == ERROR)
+				return ERROR;
+		}
+		afternl = (c == '\n');
 	}
-	return 0;
+	return OK;
 }
 
 void writelines(void)
@@ -90,82 +95,61 @@ void writelines(void)
 	}
 }
 
-void initialize(void)
+void init_buff(unsigned long size)
 {
+	buffsize = size;
 	buff = (char *)malloc(buffsize * sizeof(char));
 	buffptr = buff;
 	bufflimit = buff + buffsize;
-	lines = (char **)malloc(linessize * sizeof(char *));
-	first = line = lines;
-	lineslimit = lines + linessize;
-	*line = buffptr;
 }
 
 int growbuff(void)
 {
-	unsigned long tbuffsize = buffsize;
-	char *tbuff = buff, *tbuffptr = buffptr, *tbufflimit = bufflimit;
-	char *bptr;
-	char **tlines = lines, **tfirst = first, **tline = line,
-	     **tlineslimit = lineslimit;
-	char **tlptr, **lptr;
+	unsigned long used;
+	char *bptr, **lptr;
+	ptrdiff_t offset;
 
-	printf("buffsize %ld -> ", buffsize);
+	char *pbuff = buff, *pbuffptr = buffptr, *pbufflimit = bufflimit;
+	char *pfirst = *first;
+	ptrdiff_t pstart2limit = pbufflimit - pfirst;
+
 	if (buffsize == maxbuffsize) {
-		printf("error: Cannot increase buffer size (%ld char)",
+		printf("error: Cannot increase buffer size beyond %ld",
 		       buffsize);
+		return ERROR;
 	}
-	buffsize = (buffsize > maxbuffsize / 2) ? maxbuffsize : (buffsize * 2);
-	printf("%ld\n", buffsize);
 
-	initialize();
+	init_buff(buffsize > maxbuffsize / 4 ? maxbuffsize : buffsize * 4);
 
-	if (*tfirst < tbuffptr) {
-		for (bptr = *tfirst; bptr < tbuffptr; buffptr++, bptr++)
-			       *buffptr = *bptr;
+	if (pfirst < pbuffptr) {
+		for (bptr = pfirst; bptr < pbuffptr;)
+			*buffptr++ = *bptr++;
+		used = pbuffptr - pfirst;
 	} else {
-		for (bptr = *tfirst; bptr < tbufflimit; buffptr++, bptr++)
-			       *buffptr = *bptr;
-		for (bptr = tbuff; bptr < tbuffptr; buffptr++, bptr++)
-			       *buffptr = *bptr;
+		for (bptr = pfirst; bptr < pbufflimit;)
+			*buffptr++ = *bptr++;
+		for (bptr = pbuff; bptr < pbuffptr;)
+			*buffptr++ = *bptr++;
+		used = pstart2limit + (pbuffptr - pbuff);
 	}
 
-	for (tlptr = tfirst, lptr = lines; tlptr < tlineslimit;
-	     tlptr++, lptr++) {
-		if (*tlptr == NULL)
-			break;
-		*lptr = buff + ((*tlptr >= *tfirst) ?
-					*tlptr - *tfirst :
-					((tbufflimit - 0) - *tfirst) +
-						(*tlptr - tbuff));
-		if (tlptr == tfirst)
-			first = lptr;
-		else if (tlptr == tline)
-			line = lptr;
-	}	
-	for (tlptr = tlines, lptr = lptr; tlptr < tfirst;
-	     tlptr++, lptr++) {
-		if (*tlptr == NULL)
-			break;
-		*lptr = buff + ((*tlptr >= *tfirst) ?
-					*tlptr - *tfirst :
-					((tbufflimit - 0) - *tfirst) +
-						(*tlptr - tbuff));
-		if (tlptr == tfirst)
-			first = lptr;
-		else if (tlptr == tline)
-			line = lptr;
+	for (lptr = lines; lptr < lineslimit && *lptr != NULL; lptr++) {
+		offset = *lptr >= pfirst ? *lptr - pfirst :
+					   pstart2limit + (*lptr - pbuff);
+		*lptr = buff + offset;
 	}
+	buffptr = buff + used;
 
-	buffptr = buff + tbuffsize;
+	free(pbuff);
 	return OK;
 }
 
-long getreqstd(int argc, char **argv)
+long gettailsize(int argc, char **argv)
 {
+	char c, *ptr;
+	int n = 0;
+
 	if (argc == 2 && *argv[1] == '-') {
-		char c, *ptr;
-		int n = 0;
 		ptr = argv[1] + 1;
 		while ((c = *ptr++) != '\0' && isdigit(c))
 			n = (n * 10) + (c - '0');

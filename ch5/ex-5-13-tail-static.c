@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
 	long ntail, nlineptrs, nlnprint;
 	char **line, **lnlimit, **nextline;
 	long buffsize, len, nlninput;
-	char *bufpt, *buflimit, c;
+	char *bufpt, *buflimit;
 
 	ntail = (argc == 2 && *argv[1] == '-') ? atoi(argv[1] + 1) :
 						 DEFAULTTAIL;
@@ -69,7 +69,7 @@ int main(int argc, char *argv[])
 	/* go forward printing lines */
 	while (nlnprint-- > 0) {
 		bufpt = *line;
-		while (*bufpt) 
+		while (*bufpt)
 			putchar(*ADVANCEBUF);
 		line = ++line < lnlimit ? line : lines;
 	}
@@ -96,7 +96,7 @@ int getline(char *buff, long bufsize, char *bufpt)
 		ADVANCEBUF;
 	}
 	*bufpt = '\0';
-	if (len > 0) 
+	if (len > 0)
 		ADVANCEBUF;
 	return len;
 }

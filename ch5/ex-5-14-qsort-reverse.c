@@ -8,44 +8,61 @@
 #include <stdio.h>
 #include <string.h>
 #include "lines.h"
-#include "qsort.h"
+#include "quicksort.h"
 
-void qsort(void *lineptr[], int left, int right, int (*comp)(void *, void *));
-void swap(void *v[], int, int);
 int cmpstr(char *, char *);
 int numcmp(char *, char *);
 double atof(char s[]);
 
+int reverse(void *a, void *b);
+
+int (*basecompare)(void *, void *);
+int (*compare)(void *, void *);
+
 int main(int argc, char *argv[])
 {
-	int nlines;
+	int i, nlines;
 	int numeric = 0;
+	int doreverse = 0;
 
-	char *buff;
-	char **lines;
+	char *buff, **lines;
 
-	if (argc > 1 && cmpstr(argv[1], "-n") == 0)
-		numeric = 1;
+	for (i = 1; i < argc; i++) {
+		if (strcmp(argv[i], "-n") == 0)
+			numeric = 1;
+		else if (strcmp(argv[i], "-r") == 0)
+			doreverse = 1;
+	}
+
+	basecompare = numeric ? ((int (*)(void *, void *))numcmp) :
+				((int (*)(void *, void *))cmpstr);
+	compare = doreverse ? reverse : basecompare;
 
 	if ((nlines = readlines(&buff, &lines)) == LNS_ERROR) {
 		printf("input too big to sort\n");
 		return 0;
 	} else {
-		qsort((void **)lines, 0, nlines - 1,
-		      (int (*)(void *, void *))(numeric ? numcmp : cmpstr));
+		quicksort((void **)lines, 0, nlines - 1, compare);
 		writelines(lines, nlines);
 	}
 	freelines(buff, lines);
 	return 0;
 }
 
+int reverse(void *a, void *b)
+{
+	return (*basecompare)(b, a);
+}
 
 int cmpstr(char *s, char *t)
 {
+	int diff;
 	for (; *s == *t; s++, t++)
 		if (*s == '\0')
 			return 0;
-	return *s - *t;
+
+	diff = *s - *t;
+	return diff == 0 ? 0 : diff > 0 ? 1 : -1;
 }
 
 int numcmp(char *s1, char *s2)

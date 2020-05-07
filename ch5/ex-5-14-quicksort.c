@@ -1,21 +1,13 @@
 /* Exercise 5-14
- * 
- * Modify the sort program to handle a -r flag, which indicates sorting in 
+ *
+ * Modify the sort program to handle a -r flag, which indicates sorting in
  * reverse (decreasing) order.  Be sure that -r works with -n.
  */
 
 #include <ctype.h>
 #include <stdio.h>
 #include <string.h>
-
-#define BUFFSIZE (1 << 30)
-#define MAXLINES 5000
-
-char buffer[BUFFSIZE];
-char *lineptr[MAXLINES];
-
-int readlines(char *lineptr[], int maxlines, char *buff, int buffsize);
-void writelines(char *lineptr[], int nlines);
+#include "lines.h"
 
 void qsort(void *lineptr[], int left, int right, int (*comp)(void *, void *));
 void swap(void *v[], int, int);
@@ -28,17 +20,23 @@ int main(int argc, char *argv[])
 	int nlines;
 	int numeric = 0;
 
+	char *buff;
+	char **lines;
+
 	if (argc > 1 && cmpstr(argv[1], "-n") == 0)
 		numeric = 1;
-	if ((nlines = readlines(lineptr, MAXLINES, buffer, BUFFSIZE)) >= 0) {
-		qsort((void **)lineptr, 0, nlines - 1,
+
+	if ((nlines = readlines(&buff, &lines)) != LNS_ERROR) {
+		qsort((void **)lines, 0, nlines - 1,
 		      (int (*)(void *, void *))(numeric ? numcmp : cmpstr));
-		writelines(lineptr, nlines);
+		writelines(lines, nlines);
 		return 0;
 	} else {
 		printf("input too big to sort\n");
 		return 1;
 	}
+	freelines(buff, lines);
+	return 0;
 }
 
 void qsort(void *v[], int left, int right, int (*comp)(void *, void *))
@@ -118,34 +116,4 @@ double atof(char s[])
 			power = (expsign == 1) ? power / 10.0 : power * 10.0;
 	}
 	return sign * val / power;
-}
-
-int readlines(char *lines[], int maxlines, char *buff, int buffsize)
-{
-	char c;
-	char *cursor = buff;
-	char *bufflimit = buff + buffsize - 1; /* room for last '\0' */
-	char **lptr = lines;
-	char **linelimit = lines + maxlines;
-	int afternl;
-
-	while ((c = getchar()) != EOF) {
-		if (afternl) {
-			*cursor++ = '\0';
-			*lptr++ = cursor;
-		}
-		if (cursor >= bufflimit || lptr >= linelimit) {
-			return -1;
-		}		
-		afternl = ((*cursor++ = c) == '\n');
-	}
-	return lptr - lines;
-}
-
-void writelines(char **lines, int nlines)
-{
-	char **line, **linelimit = lines + nlines;
-
-	for (line = lines; line < linelimit; line++)
-		printf("%s", *line);
 }

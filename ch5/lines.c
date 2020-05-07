@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include "lines.h"
 
-#define INITIAL_BUFFSIZE (1 << 1)
-#define INITIAL_LINESSIZE (1 << 0)
+#define INITIAL_BUFFSIZE (1 << 10)
+#define INITIAL_LINESSIZE (1 << 10)
 
 unsigned long maxlen = ULONG_MAX;
 

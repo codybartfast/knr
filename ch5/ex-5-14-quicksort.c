@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "lines.h"
+#include "qsort.h"
 
 void qsort(void *lineptr[], int left, int right, int (*comp)(void *, void *));
 void swap(void *v[], int, int);
@@ -26,44 +27,18 @@ int main(int argc, char *argv[])
 	if (argc > 1 && cmpstr(argv[1], "-n") == 0)
 		numeric = 1;
 
-	if ((nlines = readlines(&buff, &lines)) != LNS_ERROR) {
+	if ((nlines = readlines(&buff, &lines)) == LNS_ERROR) {
+		printf("input too big to sort\n");
+		return 0;
+	} else {
 		qsort((void **)lines, 0, nlines - 1,
 		      (int (*)(void *, void *))(numeric ? numcmp : cmpstr));
 		writelines(lines, nlines);
-		return 0;
-	} else {
-		printf("input too big to sort\n");
-		return 1;
 	}
 	freelines(buff, lines);
 	return 0;
 }
 
-void qsort(void *v[], int left, int right, int (*comp)(void *, void *))
-{
-	int i, last;
-
-	if (left >= right)
-		return;
-	swap(v, left, (left + right) / 2);
-	last = left;
-	for (i = left + 1; i <= right; i++)
-		if ((*comp)(v[i], v[left]) < 0)
-			swap(v, ++last, i);
-	swap(v, left, last);
-	qsort(v, left, last - 1, comp);
-	qsort(v, last + 1, right, comp);
-}
-
-void swap(void *v[], int i, int j)
-{
-	void *temp;
-	double atof(char s[]);
-
-	temp = v[i];
-	v[i] = v[j];
-	v[j] = temp;
-}
 
 int cmpstr(char *s, char *t)
 {

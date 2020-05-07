@@ -33,7 +33,7 @@ char *buff, *cursor, *bufflimit;
 /* max number of lines to print */
 unsigned long tailsize;
 /* pointers to the start of lines in the buffer, loops back start at limit */
-char **lines, **firstln, **lastln, **lineslimit;
+char **lines, **firstln, **currln, **lineslimit;
 
 int readlines(void);
 void writelines(void);
@@ -50,7 +50,7 @@ int main(int argc, char **argv)
 		return 0;
 	if (init_buff(INITIAL_BUFFSIZE) != OK)
 		return 0;
-	if (init_lines() != OK){
+	if (init_lines() != OK) {
 		free(buff);
 		return 0;
 	}
@@ -65,26 +65,24 @@ int main(int argc, char **argv)
 
 int readlines(void)
 {
-	char c;
-	int afternl = 0; /* true if previously read character was a newline */
+	int c, prevc = '\0';
 
 	while ((c = getchar()) != EOF) {
-		if (afternl) {
-			if (++lastln == lineslimit)
-				lastln = lines;
-			*lastln = cursor;
-			if (lastln == firstln)
+		if (prevc == '\n') {
+			if (++currln == lineslimit)
+				currln = lines;
+			*currln = cursor;
+			if (currln == firstln)
 				if (++firstln == lineslimit)
 					firstln = lines;
 		}
-		*cursor = c;
+		*cursor = prevc = c;
 		if (++cursor == bufflimit)
 			cursor = buff;
 		if (cursor == *firstln) {
 			if (enlargebuff() != OK)
 				return ERROR;
 		}
-		afternl = (c == '\n');
 	}
 	return OK;
 }
@@ -124,7 +122,7 @@ int init_lines(void)
 		printf("error: Insufficient memory (allocating lines)\n");
 		return ERROR;
 	}
-	firstln = lastln = lines;
+	firstln = currln = lines;
 	*lines = buff;
 	lineslimit = lines + tailsize;
 	return OK;
@@ -138,8 +136,8 @@ int enlargebuff(void)
 
 	/* copy info about current buffer before it's replaced */
 	char *pbuff = buff, *pcursor = cursor, *pbufflimit = bufflimit;
-	char *pfirst = *firstln;
-	ptrdiff_t pfirst2limit = pbufflimit - pfirst;
+	char *pfirstchr = *firstln;
+	ptrdiff_t pfirst2limit = pbufflimit - pfirstchr;
 
 	if (buffsize == maxbuffsize) {
 		printf("error: Cannot increase buffer size beyond %ld\n",
@@ -154,22 +152,23 @@ int enlargebuff(void)
 	}
 
 	/* copy data from previous buff to new buff */
-	if (pfirst < pcursor) {
-		for (bptr = pfirst; bptr < pcursor;)
+	if (pfirstchr < pcursor) {
+		for (bptr = pfirstchr; bptr < pcursor;)
 			*cursor++ = *bptr++;
-		used = pcursor - pfirst;
+		used = pcursor - pfirstchr;
 	} else {
-		for (bptr = pfirst; bptr < pbufflimit;)
+		for (bptr = pfirstchr; bptr < pbufflimit;)
 			*cursor++ = *bptr++;
 		for (bptr = pbuff; bptr < pcursor;)
 			*cursor++ = *bptr++;
 		used = pfirst2limit + (pcursor - pbuff);
 	}
 
-	/* update line pointers to point to lines' new positions in new buff */
-	for (lptr = lines; lptr < lineslimit && *lptr != NULL; lptr++) {
-		offset = *lptr >= pfirst ? *lptr - pfirst :
-					   pfirst2limit + (*lptr - pbuff);
+	/* update line pointers to point to lines' new positions in new buff,
+	   may copy uninitialised values */
+	for (lptr = lines; lptr < lineslimit; lptr++) {
+		offset = *lptr >= pfirstchr ? *lptr - pfirstchr :
+					      pfirst2limit + (*lptr - pbuff);
 		*lptr = buff + offset;
 	}
 

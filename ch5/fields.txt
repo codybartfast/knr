@@ -1,0 +1,10 @@
+Brian	100	Reverse
+Dennis	93	[tail]
+Brian	87	{Fields}
+Dennis	75	/sort/
+Brian	62	Fold
+Dennis	50	en-tab
+Brian	42	'Pointer
+Dennis	39	*readlines
+Brian	27	Tabs
+Dennis	19	#float

@@ -1,4 +1,9 @@
 {
     "editor.tabSize": 8,
-    "editor.insertSpaces": false
+    "editor.insertSpaces": false,
+    "files.associations": {
+        "*.tcc": "c",
+        "string": "c",
+        "string_view": "c"
+    }
 }

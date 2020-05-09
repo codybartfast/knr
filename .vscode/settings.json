@@ -1,18 +1,4 @@
 {
     "editor.tabSize": 8,
     "editor.insertSpaces": false,
-    "files.associations": {
-        "*.tcc": "c",
-        "string": "c",
-        "string_view": "c",
-        "optional": "c",
-        "istream": "c",
-        "ostream": "c",
-        "system_error": "c",
-        "array": "c",
-        "tuple": "c",
-        "type_traits": "c",
-        "utility": "c",
-        "sstream": "c"
-    }
 }

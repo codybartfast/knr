@@ -6,8 +6,6 @@
  * page numbers.)
  */
 
-#define UNSPEC -1
-
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,20 +13,20 @@
 #include "lines.h"
 #include "quicksort.h"
 
-void parseargs(int argc, char *argv[]);
+int comparefields(void *s1, void *s2);
 
+void parseargs(int argc, char *argv[]);
+char **makefieldset(char *line);
+
+char *field(void *, int sortidx);
+char *line(char *set[]);
+char *fieldspace(char *set[]);
+void fold(char *value);
+void dirvalue(char *value);
+int strcmpr(char *, char *);
 int numcmp(char *, char *);
 int numcmpr(char *, char *);
-int strcmpr(char *, char *);
 void freestuff(char ***kvms, int nlines);
-void dirvalue(char *value);
-void fold(char *value);
-int issortfield(int idx);
-char **keyset(char *row);
-char *key(char *set[]);
-char *value(char *set[]);
-char *sortfield(char *set[], int sortidx);
-int keycompare(void *a, void *b);
 
 int sortcount; /* number of fields we're sorting by */
 int maxfield; /* highest field index to sort */
@@ -37,40 +35,44 @@ int *usedfields; /* fields to soft by ordered by column */
 int (**compares)(void *, void *); /* comparison function for each sort field */
 int *folds; /* whether to fold each sort sort field */
 int *dirsorts; /* whether dir sort each sort sort field */
+char ***fieldsets; /* line with the fields to sort by modified with -f, -d */
 
 int main(int argc, char *argv[])
 {
 	int i, nlines;
-	char *buff, **lines, ***keysets;
+	char *buff, **lines, ***fieldsets;
 
 	parseargs(argc, argv);
-	printf("sortcount: %d\n", sortcount);
-	printf("maxfield: %d\n", maxfield);
-
-	for (i = 0; i < sortcount; i++)
-		printf("i:%d, field:%d, fold:%d, dir:%d, fp:%%p \n", i,
-		       sortidxs[i], folds[i], dirsorts[i] /*, sortidxs[i] */);
 
 	if ((nlines = readlines(&buff, &lines)) == LNS_ERROR) {
 		printf("input too big to sort\n");
 		return 0;
 	}
 
-	keysets = malloc(nlines * sizeof(char **));
-	for (i = 0; i < nlines; i++) {
-		keysets[i] = keyset(lines[i]);
-	}
-	/*
-	quicksort((void **)kvps, 0, nlines - 1, keycompare);
+	fieldsets = malloc(nlines * sizeof(char **));
+	for (i = 0; i < nlines; i++)
+		fieldsets[i] = makefieldset(lines[i]);
+
+	quicksort((void **)fieldsets, 0, nlines - 1,
+		  (int (*)(void *, void *))comparefields);
 
 	for (i = 0; i < nlines; i++)
-		lines[i] = value(kvps[i]);
+		lines[i] = line(fieldsets[i]);
 
 	writelines(lines, nlines);
 
+	freestuff(fieldsets, nlines);
 	freelines(buff, lines);
-	freestuff(kvps, nlines);*/
 	return 0;
+}
+
+int comparefields(void *fields1, void *fields2)
+{
+	int i, rslt = 0;
+
+	for (i = 0; i < sortcount && rslt == 0; i++)
+		rslt = (*compares[i])(field(fields1, i), field(fields2, i));
+	return rslt;
 }
 
 void parseargs(int argc, char *argv[])
@@ -87,7 +89,7 @@ void parseargs(int argc, char *argv[])
 
 	argv++;
 	for (i = 0; i < argc - 1; i++) {
-		int field = UNSPEC;
+		int fieldidx;
 		int numeric = 0;
 		int reverse = 0;
 		int (*compare)(void *, void *);
@@ -96,7 +98,7 @@ void parseargs(int argc, char *argv[])
 
 		char *arg = argv[i];
 		if (*arg == '-' && isdigit(*++arg)) {
-			field = atoi(arg) - 1;
+			fieldidx = atoi(arg) - 1;
 			while (*++arg) {
 				if (*arg == 'n')
 					numeric = 1;
@@ -115,8 +117,8 @@ void parseargs(int argc, char *argv[])
 				compare = (int (*)(void *, void *))strcmpr;
 			else
 				compare = (int (*)(void *, void *))strcmp;
-			maxfield = field > maxfield ? field : maxfield;
-			sortidxs[sortcount] = field;
+			maxfield = fieldidx > maxfield ? fieldidx : maxfield;
+			sortidxs[sortcount] = fieldidx;
 			compares[sortcount] = compare;
 			folds[sortcount] = fold;
 			dirsorts[sortcount] = dirsort;
@@ -125,23 +127,22 @@ void parseargs(int argc, char *argv[])
 	}
 }
 
-char **keyset(char *row)
+char **makefieldset(char *line)
 {
-	long len = strlen(row);
-	char *keysstr = malloc((len + 1) * sizeof(char));
+	char *fieldspace = malloc((strlen(line) + 1) * sizeof(char));
 	char *chr, *field;
 	int fieldidx, i;
 
 	char **tmpfields = malloc((maxfield + 1) * sizeof(char *));
 	char **set = malloc((2 + sortcount) * sizeof(char *));
 
-	strcpy(keysstr, row);
-	set[0] = row;
-	set[1] = keysstr;
+	strcpy(fieldspace, line);
+	set[0] = line;
+	set[1] = fieldspace;
 
-	field = keysstr;
+	field = fieldspace;
 	fieldidx = 0;
-	for (chr = keysstr; *chr; chr++) {
+	for (chr = fieldspace; *chr; chr++) {
 		if (*chr == '\t' || *chr == '\n') {
 			*chr = '\0';
 			if (fieldidx <= maxfield)
@@ -158,32 +159,23 @@ char **keyset(char *row)
 			dirvalue(field);
 		set[2 + i] = field;
 	}
-
-	printf("\nrow:    %s", row);
-	printf("fields: ");
-	for (i = 0; i <= maxfield; i++)
-		printf("%s, ", tmpfields[i]);
-	printf("\nkeys:   ");
-	for (i = 0; i < sortcount; i++)
-		printf("%s, ", set[2 + i]);
-	printf("\n");
-
+	free(tmpfields);
 	return set;
 }
 
-char *key(char *set[])
+char *field(void *set, int idx)
+{
+	return *(((char **)set) + 2 + idx);
+}
+
+char *line(char *set[])
 {
 	return set[0];
 }
 
-char *value(char *set[])
+char *fieldspace(char *set[])
 {
 	return set[1];
-}
-
-char *sortfield(char *set[], int idx)
-{
-	return set[2 + idx];
 }
 
 void fold(char *value)
@@ -201,6 +193,11 @@ void dirvalue(char *value)
 			*write++ = c;
 	}
 	*write = '\0';
+}
+
+int strcmpr(char *s1, char *s2)
+{
+	return strcmp(s2, s1);
 }
 
 int numcmp(char *s1, char *s2)
@@ -222,7 +219,17 @@ int numcmpr(char *s1, char *s2)
 	return numcmp(s2, s1);
 }
 
-int strcmpr(char *s1, char *s2)
+void freestuff(char ***kvps, int nlines)
 {
-	return strcmp(s2, s1);
+	int i;
+	for (i = 0; i < nlines; i++) {
+		free(fieldspace(kvps[i]));
+		free(kvps[i]);
+	}
+	free(fieldsets);
+
+	free(sortidxs);
+	free(compares);
+	free(folds);
+	free(dirsorts);
 }

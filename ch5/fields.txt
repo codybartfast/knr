@@ -1,10 +1,8 @@
-Brian	100	Reverse
-Dennis	93	[tail]
-Brian	87	{Fields}
-Dennis	75	/sort/
-Brian	62	Fold
-Dennis	50	en-tab
-Brian	42	'Pointer
-Dennis	39	*readlines
-Brian	27	Tabs
-Dennis	19	#float
+Brian	Part D	second	132	*readlines
+Dennis	Part A	first	22	[tail]
+Dennis	Part C	first	92	'entab
+Brian	Part B	first	42	{Fields}
+Dennis	Part B	Second	75	/tail/
+Brian	Part C	Second	85	fields
+Brian	Part A	First	9	readlines
+Dennis	Part D	Second	101	en-tab

@@ -13,7 +13,7 @@
 #include "lines.h"
 #include "quicksort.h"
 
-int comparefields(void *s1, void *s2);
+int compare(void *s1, void *s2);
 
 void parseargs(int argc, char *argv[]);
 char **makefieldset(char *line);
@@ -28,14 +28,15 @@ int numcmp(char *, char *);
 int numcmpr(char *, char *);
 void freestuff(char ***kvms, int nlines);
 
+/* set by parseargs */
 int sortcount; /* number of fields we're sorting by */
-int maxfield; /* highest field index to sort */
-int *sortidxs; /* fields to sort by ordered by priority */
-int *usedfields; /* fields to soft by ordered by column */
+int maxfield; /* highest field index of the fields we're sorting by */
+int *sortidxs; /* indexes of fields to sort by, ordered by priority */
 int (**compares)(void *, void *); /* comparison function for each sort field */
-int *folds; /* whether to fold each sort sort field */
-int *dirsorts; /* whether dir sort each sort sort field */
-char ***fieldsets; /* line with the fields to sort by modified with -f, -d */
+int *folds; /* whether to fold each sort field */
+int *dirsorts; /* whether to use dir sort for each sort field */
+
+char ***fieldsets; /* each line with its fields to sort by mod'ed with -f, -d */
 
 int main(int argc, char *argv[])
 {
@@ -53,8 +54,7 @@ int main(int argc, char *argv[])
 	for (i = 0; i < nlines; i++)
 		fieldsets[i] = makefieldset(lines[i]);
 
-	quicksort((void **)fieldsets, 0, nlines - 1,
-		  (int (*)(void *, void *))comparefields);
+	quicksort((void **)fieldsets, 0, nlines - 1, compare);
 
 	for (i = 0; i < nlines; i++)
 		lines[i] = line(fieldsets[i]);
@@ -66,7 +66,7 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-int comparefields(void *fields1, void *fields2)
+int compare(void *fields1, void *fields2)
 {
 	int i, rslt = 0;
 

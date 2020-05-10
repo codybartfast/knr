@@ -13,30 +13,32 @@
 #include "lines.h"
 #include "quicksort.h"
 
-int compare(void *s1, void *s2);
+#define VOIDCOMP int (*)(void *, void *)
+#define CHARCOMP int (*)(char *, char *)
+
+int compare(char **s1, char **s2);
 
 void parseargs(int argc, char *argv[]);
 char **makefieldset(char *line);
 
 char *field(void *, int sortidx);
 char *line(char *set[]);
-char *fieldspace(char *set[]);
+char *allfields(char *set[]);
 void fold(char *value);
-void dirvalue(char *value);
+void dirsort(char *value);
 int strcmpr(char *, char *);
 int numcmp(char *, char *);
 int numcmpr(char *, char *);
 void freestuff(char ***kvms, int nlines);
 
-/* set by parseargs */
-int sortcount; /* number of fields we're sorting by */
-int maxfield; /* highest field index of the fields we're sorting by */
 int *sortidxs; /* indexes of fields to sort by, ordered by priority */
-int (**compares)(void *, void *); /* comparison function for each sort field */
+int nsortflds; /* number of fields we're sorting by */
+int maxsortidx; /* highest index of the fields we're sorting by */
+int (**compares)(char *, char *); /* comparison function for each sort field */
 int *folds; /* whether to fold each sort field */
 int *dirsorts; /* whether to use dir sort for each sort field */
 
-char ***fieldsets; /* each line with its fields to sort by mod'ed with -f, -d */
+char ***fieldsets; /* sort by fields of lines with -f, -d applied if needed */
 
 int main(int argc, char *argv[])
 {
@@ -54,7 +56,7 @@ int main(int argc, char *argv[])
 	for (i = 0; i < nlines; i++)
 		fieldsets[i] = makefieldset(lines[i]);
 
-	quicksort((void **)fieldsets, 0, nlines - 1, compare);
+	quicksort((void **)fieldsets, 0, nlines - 1, (VOIDCOMP)compare);
 
 	for (i = 0; i < nlines; i++)
 		lines[i] = line(fieldsets[i]);
@@ -66,12 +68,12 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-int compare(void *fields1, void *fields2)
+int compare(char **sortflds1, char **sortflds2)
 {
 	int i, rslt = 0;
 
-	for (i = 0; i < sortcount && rslt == 0; i++)
-		rslt = (*compares[i])(field(fields1, i), field(fields2, i));
+	for (i = 0; i < nsortflds && rslt == 0; i++)
+		rslt = (*compares[i])(sortflds1[i], sortflds2[i]);
 	return rslt;
 }
 
@@ -80,29 +82,29 @@ void parseargs(int argc, char *argv[])
 	int i;
 	int maxsortcount = argc - 1;
 
-	sortcount = 0;
-
+	nsortflds = 0;
 	sortidxs = malloc(maxsortcount * sizeof(int));
-	compares = malloc(maxsortcount * sizeof(int (*)(void *, void *)));
+	compares = malloc(maxsortcount * sizeof(CHARCOMP));
 	folds = malloc(maxsortcount * sizeof(int));
 	dirsorts = malloc(maxsortcount * sizeof(int));
 
 	argv++;
 	for (i = 0; i < argc - 1; i++) {
+		char *arg = argv[i];
+
 		int fieldidx;
 		int numeric = 0;
 		int reverse = 0;
-		int (*compare)(void *, void *);
+		int (*compare)(char *, char *);
 		int fold = 0;
 		int dirsort = 0;
 
-		char *arg = argv[i];
 		if (*arg == '-' && isdigit(*++arg)) {
 			fieldidx = atoi(arg) - 1;
 			while (*++arg) {
 				if (*arg == 'n')
 					numeric = 1;
-				if (*arg == 'r')
+				else if (*arg == 'r')
 					reverse = 1;
 				else if (*arg == 'f')
 					fold = 1;
@@ -110,72 +112,72 @@ void parseargs(int argc, char *argv[])
 					dirsort = 1;
 			}
 			if (numeric && reverse)
-				compare = (int (*)(void *, void *))numcmpr;
+				compare = numcmpr;
 			else if (numeric)
-				compare = (int (*)(void *, void *))numcmp;
+				compare = numcmp;
 			else if (reverse)
-				compare = (int (*)(void *, void *))strcmpr;
+				compare = strcmpr;
 			else
-				compare = (int (*)(void *, void *))strcmp;
-			maxfield = fieldidx > maxfield ? fieldidx : maxfield;
-			sortidxs[sortcount] = fieldidx;
-			compares[sortcount] = compare;
-			folds[sortcount] = fold;
-			dirsorts[sortcount] = dirsort;
-			sortcount++;
+				compare = (CHARCOMP)strcmp;
+			maxsortidx =
+				fieldidx > maxsortidx ? fieldidx : maxsortidx;
+			sortidxs[nsortflds] = fieldidx;
+			compares[nsortflds] = compare;
+			folds[nsortflds] = fold;
+			dirsorts[nsortflds] = dirsort;
+			nsortflds++;
 		}
 	}
 }
 
 char **makefieldset(char *line)
 {
-	char *fieldspace = malloc((strlen(line) + 1) * sizeof(char));
+	char *allfields = malloc((strlen(line) + 1) * sizeof(char));
 	char *chr, *field;
 	int fieldidx, i;
 
-	char **tmpfields = malloc((maxfield + 1) * sizeof(char *));
-	char **set = malloc((2 + sortcount) * sizeof(char *));
+	char **tmpfields = malloc((maxsortidx + 2) * sizeof(char *));
+	char **fieldset = malloc((2 + nsortflds) * sizeof(char *));
 
-	strcpy(fieldspace, line);
-	set[0] = line;
-	set[1] = fieldspace;
+	strcpy(allfields, line);
+	fieldset[nsortflds] = line;
+	fieldset[nsortflds + 1] = allfields;
 
-	field = fieldspace;
+	/* split line into fields and create temporary pointer for each field */
+	field = allfields;
 	fieldidx = 0;
-	for (chr = fieldspace; *chr; chr++) {
+	for (chr = allfields; *chr; chr++) {
 		if (*chr == '\t' || *chr == '\n') {
 			*chr = '\0';
-			if (fieldidx <= maxfield)
+			/*maxsortidx + 1 so last sort field is terminated */
+			if (fieldidx <= maxsortidx + 1)
 				tmpfields[fieldidx] = field;
 			field = chr + 1;
 			fieldidx++;
 		}
 	}
-	for (i = 0; i < sortcount; i++) {
+
+	/* ptr to fields to sort by in order, apply -f and-d if needed */
+	for (i = 0; i < nsortflds; i++) {
 		field = tmpfields[sortidxs[i]];
 		if (folds[i])
 			fold(field);
 		if (dirsorts[i])
-			dirvalue(field);
-		set[2 + i] = field;
+			dirsort(field);
+		fieldset[i] = field;
 	}
 	free(tmpfields);
-	return set;
-}
-
-char *field(void *set, int idx)
-{
-	return *(((char **)set) + 2 + idx);
+	return fieldset;
 }
 
 char *line(char *set[])
 {
-	return set[0];
+	return set[nsortflds];
 }
 
-char *fieldspace(char *set[])
+char *allfields(char *set[])
 {
-	return set[1];
+	return set[nsortflds + 1];
 }
 
 void fold(char *value)
@@ -184,7 +186,7 @@ void fold(char *value)
 		value++;
 }
 
-void dirvalue(char *value)
+void dirsort(char *value)
 {
 	char c, *write;
 	write = value;
@@ -223,7 +225,7 @@ void freestuff(char ***kvps, int nlines)
 {
 	int i;
 	for (i = 0; i < nlines; i++) {
-		free(fieldspace(kvps[i]));
+		free(allfields(kvps[i]));
 		free(kvps[i]);
 	}
 	free(fieldsets);

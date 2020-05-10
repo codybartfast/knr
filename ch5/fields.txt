@@ -1,8 +1,8 @@
 Dennis	Part D	second	132	*readlines
 Brian	Part A	first	22	[tail]
-Brian	Part C	first	92	'Entab
-Dennis	Part B	first	42	{fields}
-Brian	Part B	Second	75	/Tail/
+Brian	Part C	first	101	'Entab
+Dennis	Part B	second	42	{fields}
+Brian	Part B	First	75	/Tail/
 Dennis	Part C	Second	85	Fields
 Dennis	Part A	First	9	Readlines
-Brian	Part D	Second	101	en-tab
+Brian	Part D	Second	92	en-tab

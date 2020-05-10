@@ -1,7 +1,7 @@
 /* Exercise 5-17
  *
  * Add a field-handling capability, so sorting may be done on fields within
- * lines, each field sorted according to an independent set of options.  (The
+ * lines, each field sorted according to an independent sortflds of options.  (The
  * index for this book was sorted with -df for the index category and -n for the
  * page numbers.)
  */
@@ -13,17 +13,17 @@
 #include "lines.h"
 #include "quicksort.h"
 
-#define VOIDCOMP int (*)(void *, void *)
 #define CHARCOMP int (*)(char *, char *)
+#define VOIDCOMP int (*)(void *, void *)
 
 int compare(char **s1, char **s2);
 
 void parseargs(int argc, char *argv[]);
-char **makefieldset(char *line);
+char **getsortflds(char *line);
 
 char *field(void *, int sortidx);
-char *line(char *set[]);
-char *allfields(char *set[]);
+char *line(char *sortflds[]);
+char *fieldspace(char *sortflds[]);
 void fold(char *value);
 void dirsort(char *value);
 int strcmpr(char *, char *);
@@ -38,12 +38,10 @@ int (**compares)(char *, char *); /* comparison function for each sort field */
 int *folds; /* whether to fold each sort field */
 int *dirsorts; /* whether to use dir sort for each sort field */
 
-char ***fieldsets; /* sort by fields of lines with -f, -d applied if needed */
-
 int main(int argc, char *argv[])
 {
 	int i, nlines;
-	char *buff, **lines, ***fieldsets;
+	char *buff, **lines, ***linedata;
 
 	parseargs(argc, argv);
 
@@ -52,18 +50,18 @@ int main(int argc, char *argv[])
 		return 0;
 	}
 
-	fieldsets = malloc(nlines * sizeof(char **));
+	linedata = malloc(nlines * sizeof(char **));
 	for (i = 0; i < nlines; i++)
-		fieldsets[i] = makefieldset(lines[i]);
+		linedata[i] = getsortflds(lines[i]);
 
-	quicksort((void **)fieldsets, 0, nlines - 1, (VOIDCOMP)compare);
+	quicksort((void **)linedata, 0, nlines - 1, (VOIDCOMP)compare);
 
 	for (i = 0; i < nlines; i++)
-		lines[i] = line(fieldsets[i]);
+		lines[i] = line(linedata[i]);
 
 	writelines(lines, nlines);
 
-	freestuff(fieldsets, nlines);
+	freestuff(linedata, nlines);
 	freelines(buff, lines);
 	return 0;
 }
@@ -130,23 +128,21 @@ void parseargs(int argc, char *argv[])
 	}
 }
 
-char **makefieldset(char *line)
+char **getsortflds(char *line)
 {
-	char *allfields = malloc((strlen(line) + 1) * sizeof(char));
+	char *fieldspace = malloc((strlen(line) + 1) * sizeof(char));
 	char *chr, *field;
 	int fieldidx, i;
 
 	char **tmpfields = malloc((maxsortidx + 2) * sizeof(char *));
-	char **fieldset = malloc((2 + nsortflds) * sizeof(char *));
+	char **sortflds = malloc((2 + nsortflds) * sizeof(char *));
 
-	strcpy(allfields, line);
-	fieldset[nsortflds] = line;
-	fieldset[nsortflds + 1] = allfields;
+	strcpy(fieldspace, line);
 
 	/* split line into fields and create temporary pointer for each field */
-	field = allfields;
+	field = fieldspace;
 	fieldidx = 0;
-	for (chr = allfields; *chr; chr++) {
+	for (chr = fieldspace; *chr; chr++) {
 		if (*chr == '\t' || *chr == '\n') {
 			*chr = '\0';
 			/*maxsortidx + 1 so last sort field is terminated */
@@ -164,20 +160,23 @@ char **makefieldset(char *line)
 			fold(field);
 		if (dirsorts[i])
 			dirsort(field);
-		fieldset[i] = field;
+		sortflds[i] = field;
 	}
+	sortflds[nsortflds] = line;
+	sortflds[nsortflds + 1] = fieldspace;
+
 	free(tmpfields);
-	return fieldset;
+	return sortflds;
 }
 
-char *line(char *set[])
+char *line(char *sortflds[])
 {
-	return set[nsortflds];
+	return sortflds[nsortflds];
 }
 
-char *allfields(char *set[])
+char *fieldspace(char *sortflds[])
 {
-	return set[nsortflds + 1];
+	return sortflds[nsortflds + 1];
 }
 
 void fold(char *value)
@@ -221,14 +220,15 @@ int numcmpr(char *s1, char *s2)
 	return numcmp(s2, s1);
 }
 
-void freestuff(char ***kvps, int nlines)
+void freestuff(char ***linedata, int nlines)
 {
 	int i;
+
 	for (i = 0; i < nlines; i++) {
-		free(allfields(kvps[i]));
-		free(kvps[i]);
+		free(fieldspace(linedata[i]));
+		free(linedata[i]);
 	}
-	free(fieldsets);
+	free(linedata);
 
 	free(sortidxs);
 	free(compares);

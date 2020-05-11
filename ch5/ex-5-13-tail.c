@@ -23,7 +23,7 @@
 #define INITIAL_BUFFSIZE (1 << 10)
 #define DEFAULT_TAILSIZE 10
 
-enum { OK, ERROR };
+enum { OK = 0, ERROR = 1 };
 
 /* Single buffer to store characters, loops back to start on reaching limit */
 unsigned long buffsize;
@@ -40,11 +40,11 @@ void writelines(void);
 int init_buff(unsigned long);
 int init_lines(void);
 int enlargebuff(void);
-int settailsize(int argc, char **argv);
+int parseargs(int argc, char **argv);
 
 int main(int argc, char **argv)
 {
-	if (settailsize(argc, argv) != OK)
+	if (parseargs(argc, argv) != OK)
 		return 0;
 	if (tailsize == 0)
 		return 0;
@@ -179,10 +179,10 @@ int enlargebuff(void)
 	return OK;
 }
 
-int settailsize(int argc, char **argv)
+int parseargs(int argc, char **argv)
 {
 	char c, *ptr;
-	unsigned int d;
+	unsigned int digit;
 	unsigned long n = 0;
 	unsigned long max = ULONG_MAX;
 
@@ -204,13 +204,13 @@ int settailsize(int argc, char **argv)
 				return ERROR;
 			}
 			n *= 10;
-			d = (c - '0');
-			if (d > max - n) {
+			digit = (c - '0');
+			if (digit > max - n) {
 				printf("error: Argument too large, max: %lu\n",
 				       max);
 				return ERROR;
 			}
-			n += d;
+			n += digit;
 		}
 		tailsize = n;
 	} else if (argc == 2) {

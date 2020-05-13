@@ -16,41 +16,53 @@
 #define CHARCOMP int (*)(char *, char *)
 #define VOIDCOMP int (*)(void *, void *)
 
-void parseargs(int argc, char *argv[]);
+int parseargs(int argc, char *argv[]);
 char **getsortdata(char *line);
 int compare(char **s1, char **s2);
 
-char *line(char *sortdata[]);
-char *fieldspace(char *sortdata[]);
-void fold(char *value);
-void dirsort(char *value);
-int strcmpr(char *, char *);
-int numcmp(char *, char *);
-int numcmpr(char *, char *);
-void freestuff(char ***linedata, int nlines);
+static char *line(char *sortdata[]);
+static char *fieldspace(char *sortdata[]);
+static void fold(char *value);
+static void dirsort(char *value);
+static int strcmpr(char *, char *);
+static int numcmp(char *, char *);
+static int numcmpr(char *, char *);
+static void freestuff(char ***linedata, int nlines);
 
-int *sortidxs; /* indexes of fields to sort by, ordered by priority */
-int nsortflds; /* number of fields we're sorting by */
-int maxsortidx; /* highest index of the fields we're sorting by */
-int (**compares)(char *, char *); /* comparison function for each sort field */
-int *folds; /* whether to fold each sort field */
-int *dirsorts; /* whether to use dir sort for each sort field */
+enum { OK = 0, ERROR = -1 };
+
+static int *sortidxs; /* indexes of fields to sort by, ordered by priority */
+static int nsortflds; /* number of fields we're sorting by */
+static int maxsortidx; /* highest index of the fields we're sorting by */
+static int (**compares)(char *, char *); /* comparison function for each sort field */
+static int *folds; /* whether to fold each sort field */
+static int *dirsorts; /* whether to use dir sort for each sort field */
 
 int main(int argc, char *argv[])
 {
 	int i, nlines;
 	char *buff, **lines, ***linedata;
 
-	parseargs(argc, argv);
+	if (parseargs(argc, argv) == ERROR) {
+		printf("error: Insufficient memory (parseargs)\n");
+		return 0;
+	};
 
 	if ((nlines = readlines(&buff, &lines)) == LNS_ERROR) {
 		printf("input too big to sort\n");
 		return 0;
 	}
 
-	linedata = malloc(nlines * sizeof(char **));
+	if ((linedata = malloc(nlines * sizeof(char **))) == NULL) {
+		printf("error: Insufficient memory (linedata)\n");
+		return 0;
+	}
+
 	for (i = 0; i < nlines; i++)
-		linedata[i] = getsortdata(lines[i]);
+		if((linedata[i] = getsortdata(lines[i])) == NULL){
+			printf("error: Insufficient memory (getsoftdata)\n");
+			return 0;
+		}
 
 	quicksort((void **)linedata, 0, nlines - 1, (VOIDCOMP)compare);
 
@@ -73,7 +85,7 @@ int compare(char **sortdata1, char **sortdata2)
 	return rslt;
 }
 
-void parseargs(int argc, char *argv[])
+int parseargs(int argc, char *argv[])
 {
 	int i;
 	int maxsortcount = argc - 1;
@@ -83,6 +95,10 @@ void parseargs(int argc, char *argv[])
 	compares = malloc(maxsortcount * sizeof(CHARCOMP));
 	folds = malloc(maxsortcount * sizeof(int));
 	dirsorts = malloc(maxsortcount * sizeof(int));
+
+	if (sortidxs == NULL || compares == NULL || folds == NULL ||
+	    dirsorts == NULL)
+		return ERROR;
 
 	argv++;
 	for (i = 0; i < argc - 1; i++) {
@@ -124,6 +140,7 @@ void parseargs(int argc, char *argv[])
 			nsortflds++;
 		}
 	}
+	return OK;
 }
 
 char **getsortdata(char *line)
@@ -134,6 +151,9 @@ char **getsortdata(char *line)
 	char *fieldspace = malloc((strlen(line) + 1) * sizeof(char));
 	char **tmpfields = malloc((maxsortidx + 2) * sizeof(char *));
 	char **sortdata = malloc((nsortflds + 2) * sizeof(char *));
+
+	if (fieldspace == NULL || tmpfields == NULL || sortdata == NULL)
+		return NULL;
 
 	strcpy(fieldspace, line);
 

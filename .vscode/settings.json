@@ -1,14 +1,4 @@
 {
     "editor.tabSize": 8,
     "editor.insertSpaces": false,
-    "files.associations": {
-        "*.tcc": "c",
-        "fstream": "c",
-        "istream": "c",
-        "limits": "c",
-        "ostream": "c",
-        "sstream": "c",
-        "streambuf": "c",
-        "tuple": "c"
-    },
 }

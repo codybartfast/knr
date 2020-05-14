@@ -11,7 +11,7 @@
 #define MAXTOKEN 100
 #define BUFSIZE (1 << 10)
 
-enum { NAME, PARENS, BRACKETS };
+enum { NAME, BRACKETS };
 enum { OK = 0, ERROR };
 
 int dcl(void);
@@ -35,22 +35,23 @@ char printc(char c);
 int ws(void);
 int id(char *p);
 int brackets(char *p);
-int oparens(char *p);
-int cparens(char *p);
+int oparens(void);
+int cparens(void);
 
 int main(void)
 {
 	int rslt;
 
-	while (gettoken() != EOF) {
-		ws();
+	while (gettoken() == NAME) {
 		strcpy(datatype, token);
 		out[0] = '\0';
-		if ((rslt = dcl()) != OK)
+		if ((rslt = dcl()) != OK) {
 			nextline();
-		else if (tokentype != ';') {
+			return 0;
+		} else if (tokentype != ';') {
 			printf("sytax error\n");
 			nextline();
+			return 0;
 		} else {
 			printf("\n");
 			printf("%s: %s %s\n\n", name, out, datatype);
@@ -86,6 +87,7 @@ int dirdcl(void)
 {
 	int type, rslt;
 
+	/* (dcl) */
 	if (tokentype == '(') {
 		if ((rslt = dcl()) != OK)
 			return rslt;
@@ -99,10 +101,15 @@ int dirdcl(void)
 		printf("error: expected name or (dcl)\n");
 		return ERROR;
 	}
-	while ((type = gettoken()) == PARENS || type == BRACKETS)
-		if (type == PARENS)
-			strcat(out, " function returning");
-		else {
+	while ((type = gettoken()) == '(' || type == BRACKETS)
+		if (type == '(') {
+			if (cparens())
+				strcat(out, " function returning");
+			else {
+				printf("error: expected closking parens\n");
+				return ERROR;
+			}
+		} else {
 			strcat(out, " array");
 			strcat(out, token);
 			strcat(out, " of");
@@ -116,11 +123,8 @@ int gettoken(void)
 
 	ws();
 
-	if (oparens(p))
-		if (cparens(p))
-			tokentype = PARENS;
-		else
-			tokentype = '(';
+	if (oparens())
+		tokentype = '(';
 	else if (brackets(p))
 		tokentype = BRACKETS;
 	else if (id(p))
@@ -171,29 +175,26 @@ int brackets(char *p)
 	return rslt;
 }
 
-int oparens(char *p)
+int oparens(void)
 {
 	char c;
 	int rslt = 0;
 
 	if ((c = getch()) == '(') {
 		rslt = 1;
-		*p++ = c;
-		*p = '\0';
+
 	} else
 		ungetch(c);
 	return rslt;
 }
 
-int cparens(char *p)
+int cparens(void)
 {
 	char c;
 	int rslt = 0;
 
 	if ((c = getch()) == ')') {
 		rslt = 1;
-		*p++ = c;
-		*p = '\0';
 	} else
 		ungetch(c);
 	return rslt;

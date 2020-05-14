@@ -1,5 +1,13 @@
 int dcl();int dirdcl();
 int gettoken();
 int tokentype;
-
 char token[100];
+char **argv;
+int (*daytab)[13];
+int *daytab[13];
+void *comp();
+void (*comp)();
+char 
+(*(*x())[])();
+
+char (*(*x[3])())[5];

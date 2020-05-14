@@ -1,6 +1,6 @@
 /* Exercise 5-20.
  *
- * Expand dcl to handle declarations with function argument types, qualifiers 
+ * Expand dcl to handle declarations with function argument types, qualifiers
  * like const, and so on.
  */
 
@@ -30,14 +30,20 @@ void ungetch(int c);
 int buf[BUFSIZE];
 int bufp = 0;
 
-int whitespace(void);
+char printc(char c);
+
+int ws(void);
+int id(char *p);
+int brackets(char *p);
+int oparens(char *p);
+int cparens(char *p);
 
 int main(void)
 {
 	int rslt;
 
 	while (gettoken() != EOF) {
-		whitespace();
+		ws();
 		strcpy(datatype, token);
 		out[0] = '\0';
 		if ((rslt = dcl()) != OK)
@@ -45,8 +51,10 @@ int main(void)
 		else if (tokentype != ';') {
 			printf("sytax error\n");
 			nextline();
-		} else
+		} else {
+			printf("\n");
 			printf("%s: %s %s\n\n", name, out, datatype);
+		}
 	}
 	return 0;
 }
@@ -104,49 +112,103 @@ int dirdcl(void)
 
 int gettoken(void)
 {
-	int c;
 	char *p = token;
 
-	whitespace();
+	ws();
 
-	if ((c = getch()) == '(') {
-		if ((c = getch()) == ')') {
-			strcpy(token, "()");
-			return tokentype = PARENS;
-		} else {
-			ungetch(c);
-			return tokentype = '(';
-		}
-	} else if (c == '[') {
-		for (*p++ = c; (*p++ = getch()) != ']';)
-			;
-		*p = '\0';
-		return tokentype = BRACKETS;
-	} else if (isalpha(c)) {
+	if (oparens(p))
+		if (cparens(p))
+			tokentype = PARENS;
+		else
+			tokentype = '(';
+	else if (brackets(p))
+		tokentype = BRACKETS;
+	else if (id(p))
+		tokentype = NAME;
+	else
+		tokentype = getch();
+	return tokentype;
+}
+
+int ws(void)
+{
+	char c;
+	int rslt = 0;
+
+	while ((c = getch()) == ' ' || c == '\t' || c == '\n')
+		rslt = 1;
+	ungetch(c);
+	return rslt;
+}
+
+int id(char *p)
+{
+	char c;
+	int rslt = 0;
+
+	if (isalpha(c = getch())) {
+		rslt = 1;
 		for (*p++ = c; isalnum(c = getch());)
 			*p++ = c;
 		*p = '\0';
-		ungetch(c);
-		return tokentype = NAME;
-
-	} else {
-		return tokentype = c;
-	}
-}
-
-int whitespace(void){
-	char c;
-	int rslt = 0;
-	while((c = getch()) == ' ' || c == '\t' || c == '\n'){
-		rslt = 1;
 	}
 	ungetch(c);
 	return rslt;
 }
 
+int brackets(char *p)
+{
+	char c;
+	int rslt = 0;
+
+	if ((c = getch()) == '[') {
+		rslt = 1;
+		for (*p++ = c; (*p++ = (c = getch())) != ']';)
+			;
+		*p = '\0';
+	} else
+		ungetch(c);
+	return rslt;
+}
+
+int oparens(char *p)
+{
+	char c;
+	int rslt = 0;
+
+	if ((c = getch()) == '(') {
+		rslt = 1;
+		*p++ = c;
+		*p = '\0';
+	} else
+		ungetch(c);
+	return rslt;
+}
+
+int cparens(char *p)
+{
+	char c;
+	int rslt = 0;
+
+	if ((c = getch()) == ')') {
+		rslt = 1;
+		*p++ = c;
+		*p = '\0';
+	} else
+		ungetch(c);
+	return rslt;
+}
+
+char printc(char c)
+{
+	if (c != EOF && c != '\n')
+		printf("%c", c);
+	return c;
+}
+
 int getch(void)
 {
-	return (bufp > 0) ? buf[--bufp] : getchar();
+	return (bufp > 0) ? buf[--bufp] : printc(getchar());
 }
 
 void ungetch(int c)

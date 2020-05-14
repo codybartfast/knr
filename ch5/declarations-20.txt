@@ -1,0 +1,5 @@
+int dcl();int dirdcl();
+int gettoken();
+int tokentype;
+
+char token[100];

@@ -21,7 +21,7 @@ void nextline(void);
 int gettoken(void);
 int tokentype;
 char token[MAXTOKEN];
-char name[MAXTOKEN];
+char id[MAXTOKEN];
 char datatype[MAXTOKEN];
 char out[1 << 10];
 
@@ -33,7 +33,7 @@ int bufp = 0;
 char printc(char c);
 
 int ws(void);
-int id(char *p);
+int parseid(char *p);
 int brackets(char *p);
 int oparens(void);
 int cparens(void);
@@ -42,19 +42,23 @@ int main(void)
 {
 	int rslt;
 
-	while (gettoken() == NAME) {
+	while (gettoken() != EOF) {
+		if(tokentype != NAME){
+			printf("\nerror: Expected type\n");
+			return 0;
+		}
 		strcpy(datatype, token);
 		out[0] = '\0';
 		if ((rslt = dcl()) != OK) {
 			nextline();
 			return 0;
 		} else if (tokentype != ';') {
-			printf("sytax error\n");
+			printf("\nsytax error\n");
 			nextline();
 			return 0;
 		} else {
 			printf("\n");
-			printf("%s: %s %s\n\n", name, out, datatype);
+			printf("%s: %s %s\n\n", id, out, datatype);
 		}
 	}
 	return 0;
@@ -87,18 +91,17 @@ int dirdcl(void)
 {
 	int type, rslt;
 
-	/* (dcl) */
 	if (tokentype == '(') {
 		if ((rslt = dcl()) != OK)
 			return rslt;
 		if (tokentype != ')') {
-			printf("error: missing )\n");
+			printf("\nerror: missing )\n");
 			return ERROR;
 		}
 	} else if (tokentype == NAME)
-		strcpy(name, token);
+		strcpy(id, token);
 	else {
-		printf("error: expected name or (dcl)\n");
+		printf("\nerror: expected name or (dcl)\n");
 		return ERROR;
 	}
 	while ((type = gettoken()) == '(' || type == BRACKETS)
@@ -106,7 +109,7 @@ int dirdcl(void)
 			if (cparens())
 				strcat(out, " function returning");
 			else {
-				printf("error: expected closking parens\n");
+				printf("\nerror: expected closking parens\n");
 				return ERROR;
 			}
 		} else {
@@ -127,7 +130,7 @@ int gettoken(void)
 		tokentype = '(';
 	else if (brackets(p))
 		tokentype = BRACKETS;
-	else if (id(p))
+	else if (parseid(p))
 		tokentype = NAME;
 	else
 		tokentype = getch();
@@ -145,7 +148,7 @@ int ws(void)
 	return rslt;
 }
 
-int id(char *p)
+int parseid(char *p)
 {
 	char c;
 	int rslt = 0;

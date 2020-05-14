@@ -11,7 +11,7 @@
 #define MAXTOKEN 100
 #define BUFSIZE (1 << 10)
 
-enum { NAME, BRACKETS };
+enum { NAME, TYPE, BRACKETS };
 enum { OK = 0, ERROR };
 
 int dcl(void);
@@ -25,13 +25,15 @@ char id[MAXTOKEN];
 char datatype[MAXTOKEN];
 char out[1 << 10];
 
+char printc(char c);
 int getch(void);
 void ungetch(int c);
 int buf[BUFSIZE];
 int bufp = 0;
 
-char printc(char c);
-
+char *types[] = { "void",  "char",   "short",  "int",	  "long",
+		  "float", "double", "signed", "unsigned" };
+int ntypes = 9;
 int ws(void);
 int parseid(char *p);
 int brackets(char *p);
@@ -43,8 +45,8 @@ int main(void)
 	int rslt;
 
 	while (gettoken() != EOF) {
-		if(tokentype != NAME){
-			printf("\nerror: Expected type\n");
+		if (tokentype != TYPE) {
+			printf("\nerror: Expected a type\n");
 			return 0;
 		}
 		strcpy(datatype, token);
@@ -127,11 +129,11 @@ int gettoken(void)
 	ws();
 
 	if (oparens())
-		tokentype = '(';
+		;
 	else if (brackets(p))
-		tokentype = BRACKETS;
+		;
 	else if (parseid(p))
-		tokentype = NAME;
+		;
 	else
 		tokentype = getch();
 	return tokentype;
@@ -150,14 +152,22 @@ int ws(void)
 
 int parseid(char *p)
 {
-	char c;
-	int rslt = 0;
+	char c, *tkn;
+	int i, rslt = 0;
 
+	tkn = p;
 	if (isalpha(c = getch())) {
 		rslt = 1;
 		for (*p++ = c; isalnum(c = getch());)
 			*p++ = c;
 		*p = '\0';
+		tokentype = NAME;
+		for (i = 0; i < ntypes; i++) {
+			if (strcmp(tkn, types[i]) == 0) {
+				tokentype = TYPE;
+				break;
+			}
+		}
 	}
 	ungetch(c);
 	return rslt;
@@ -171,6 +181,7 @@ int brackets(char *p)
 		for (*p++ = c; (*p++ = (c = getch())) != ']';)
 			;
 		*p = '\0';
+		tokentype = BRACKETS;
 		return 1;
 	}
 	ungetch(c);
@@ -181,8 +192,10 @@ int oparens(void)
 {
 	char c;
 
-	if ((c = getch()) == '(')
+	if ((c = getch()) == '(') {
+		tokentype = '(';
 		return 1;
+	}
 	ungetch(c);
 	return 0;
 }
@@ -191,8 +204,10 @@ int cparens(void)
 {
 	char c;
 
-	if ((c = getch()) == ')')
+	if ((c = getch()) == ')') {
+		tokentype = ')';
 		return 1;
+	}
 	ungetch(c);
 	return 0;
 }

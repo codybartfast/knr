@@ -163,41 +163,35 @@ int id(char *p)
 int brackets(char *p)
 {
 	char c;
-	int rslt = 0;
 
 	if ((c = getch()) == '[') {
-		rslt = 1;
 		for (*p++ = c; (*p++ = (c = getch())) != ']';)
 			;
 		*p = '\0';
-	} else
-		ungetch(c);
-	return rslt;
+		return 1;
+	}
+	ungetch(c);
+	return 0;
 }
 
 int oparens(void)
 {
 	char c;
-	int rslt = 0;
 
-	if ((c = getch()) == '(') {
-		rslt = 1;
-
-	} else
-		ungetch(c);
-	return rslt;
+	if ((c = getch()) == '(')
+		return 1;
+	ungetch(c);
+	return 0;
 }
 
 int cparens(void)
 {
 	char c;
-	int rslt = 0;
 
-	if ((c = getch()) == ')') {
-		rslt = 1;
-	} else
-		ungetch(c);
-	return rslt;
+	if ((c = getch()) == ')')
+		return 1;
+	ungetch(c);
+	return 0;
 }
 
 char printc(char c)

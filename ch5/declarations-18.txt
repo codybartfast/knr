@@ -1,0 +1,5 @@
+int dcl()
+int dirdcl(); /* comment */
+int gettoken()
+int tokentype
+char token[100]

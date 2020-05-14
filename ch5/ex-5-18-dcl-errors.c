@@ -1,62 +1,92 @@
+/* Exercise 5-18.
+ *
+ * Make dcl recover from input errors.
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
 
 #define MAXTOKEN 100
-enum { NAME, PARENS, BRACKETS };
-
-static void dcl(void);
-static void dirdcl(void);
-
-static int gettoken(void);
-static int tokentype;
-static char token[MAXTOKEN];
-static char name[MAXTOKEN];
-static char datatype[MAXTOKEN];
-static char out[1 << 10];
-
 #define BUFSIZE (1 << 10)
-static int getch(void);
-static void ungetch(int c);
-static char buf[BUFSIZE];
-static int bufp = 0;
+
+enum { NAME, PARENS, BRACKETS };
+enum { OK = 0, ERROR };
+
+int dcl(void);
+int dirdcl(void);
+
+void nextline(void);
+int gettoken(void);
+int tokentype;
+char token[MAXTOKEN];
+char name[MAXTOKEN];
+char datatype[MAXTOKEN];
+char out[1 << 10];
+
+int getch(void);
+void ungetch(int c);
+int buf[BUFSIZE];
+int bufp = 0;
 
 int main(void)
 {
+	int rslt;
+
 	while (gettoken() != EOF) {
 		strcpy(datatype, token);
 		out[0] = '\0';
-		dcl();
-		if (tokentype != '\n')
+		if ((rslt = dcl()) != OK)
+			nextline();
+		else if (tokentype != '\n') {
 			printf("sytax error\n");
-		printf("%s: %s %s\n", name, out, datatype);
+			nextline();
+		} else
+			printf("%s: %s %s\n", name, out, datatype);
 	}
 	return 0;
 }
 
-void dcl(void)
+void nextline(void)
 {
-	int ns;
+	int c;
+
+	while ((c = getch()) != '\n' && c != EOF)
+		;
+	if (c == EOF)
+		ungetch(c);
+}
+
+int dcl(void)
+{
+	int ns, rslt;
 
 	for (ns = 0; gettoken() == '*';)
 		ns++;
-	dirdcl();
+	if ((rslt = dirdcl()) != OK)
+		return rslt;
 	while (ns-- > 0)
 		strcat(out, " pointer to");
+	return OK;
 }
 
-void dirdcl(void)
+int dirdcl(void)
 {
-	int type;
+	int type, rslt;
 
 	if (tokentype == '(') {
-		dcl();
-		if (tokentype != ')')
+		if ((rslt = dcl()) != OK)
+			return rslt;
+		if (tokentype != ')') {
 			printf("error: missing )\n");
+			return ERROR;
+		}
 	} else if (tokentype == NAME)
 		strcpy(name, token);
-	else
+	else {
 		printf("error: expected name or (dcl)\n");
+		return ERROR;
+	}
 	while ((type = gettoken()) == PARENS || type == BRACKETS)
 		if (type == PARENS)
 			strcat(out, " function returning");
@@ -65,12 +95,12 @@ void dirdcl(void)
 			strcat(out, token);
 			strcat(out, " of");
 		}
+	return OK;
 }
 
 int gettoken(void)
 {
-	int c, getch(void);
-	void ungetch(int);
+	int c;
 	char *p = token;
 
 	while ((c = getch()) == ' ' || c == '\t')

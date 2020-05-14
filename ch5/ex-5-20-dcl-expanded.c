@@ -34,6 +34,7 @@ int bufp = 0;
 char *types[] = { "void",  "char",   "short",  "int",	  "long",
 		  "float", "double", "signed", "unsigned" };
 int ntypes = 9;
+int params(void);
 int ws(void);
 int parseid(char *p);
 int brackets(char *p);
@@ -108,10 +109,15 @@ int dirdcl(void)
 	}
 	while ((type = gettoken()) == '(' || type == BRACKETS)
 		if (type == '(') {
+			strcat(out, " function taking");
+			if ((rslt = params()) != 0) {
+				return rslt;
+			}
 			if (cparens())
-				strcat(out, " function returning");
+				strcat(out, " and returning");
 			else {
-				printf("\nerror: expected closking parens\n");
+				printf("\nerror: expected closing parentheses "
+				       "after paramaters\n");
 				return ERROR;
 			}
 		} else {
@@ -119,6 +125,12 @@ int dirdcl(void)
 			strcat(out, token);
 			strcat(out, " of");
 		}
+	return OK;
+}
+
+int params(void)
+{
+	strcat(out, " no arguments");
 	return OK;
 }
 

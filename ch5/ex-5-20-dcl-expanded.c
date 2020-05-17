@@ -11,7 +11,7 @@
 #define MAXTOKEN 100
 #define BUFSIZE (1 << 10)
 
-enum { NAME, TYPE, BRACKETS };
+enum { VAR, TYPE, BRACKETS };
 enum { OK = 0, ERROR };
 enum { NO = 0, YES };
 
@@ -24,7 +24,7 @@ void nextline(void);
 int gettoken(void);
 int tokentype;
 char token[MAXTOKEN];
-char id[MAXTOKEN];
+char name[MAXTOKEN];
 char datatype[MAXTOKEN];
 char out[1 << 10];
 
@@ -69,7 +69,7 @@ int declaration(int reqname)
 		return ERROR;
 	} else {
 		printf("\n");
-		printf("%s:%s %s\n\n", id, out, datatype);
+		printf("%s:%s %s\n\n", name, out, datatype);
 	}
 	return OK;
 }
@@ -99,14 +99,14 @@ int dirdcl(int reqname)
 			printf("\nerror: missing )\n");
 			return ERROR;
 		}
-	} else if (tokentype == NAME)
-		strcpy(id, token);
+	} else if (tokentype == VAR)
+		strcpy(name, token);
 	else if (!reqname) {
 		reqname = YES;
-		id[0] = '\0';
+		name[0] = '\0';
 		gotnext = YES;
 	} else {
-		printf("\nerror: expected name or (dcl)\n");
+		printf("\nerror: expected variable name or (dcl)\n");
 		return ERROR;
 	}
 	if (!gotnext)
@@ -180,7 +180,7 @@ int parseid(char *p)
 		for (*p++ = c; isalnum(c = getch());)
 			*p++ = c;
 		*p = '\0';
-		tokentype = NAME;
+		tokentype = VAR;
 		for (i = 0; i < ntypes; i++) {
 			if (strcmp(tkn, types[i]) == 0) {
 				tokentype = TYPE;

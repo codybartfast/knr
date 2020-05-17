@@ -42,10 +42,9 @@ char *types[] = { "void",  "char",   "short",  "int",	  "long",
 int ntypes = 9;
 int params(char *out);
 int ws(void);
-int parseid(char *p);
+int name(char *p);
 int brackets(char *p);
 int oparens(void);
-int cparens(void);
 
 int main(void)
 {
@@ -103,17 +102,17 @@ int dirdcl(char *name, char *out, int reqname)
 	int rslt;
 	int gotnext = NO;
 
-	if (tokentype == '(') {
+	if (tokentype == VAR)
+		strcpy(name, token);
+	else if (tokentype == '(') {
 		if ((rslt = dcl(name, out, reqname)) != OK)
 			return rslt;
 		if (tokentype != ')') {
 			printf("\nerror: missing )\n");
 			return ERROR;
 		}
-	} else if (tokentype == VAR)
-		strcpy(name, token);
-	else if (!reqname) {
-		printf("\n-- implicit name -- (%d/%c)\n", tokentype, tokentype);
+	} else if (!reqname) {
+		/* doesn't support anonymous functions */
 		reqname = YES;
 		name[0] = '\0';
 		gotnext = YES;
@@ -129,7 +128,6 @@ int dirdcl(char *name, char *out, int reqname)
 			if ((rslt = params(out)) != 0) {
 				return rslt;
 			}
-			/* printf("\nback from params with %s\n", out); */
 		} else {
 			strcat(out, " array");
 			strcat(out, token);
@@ -144,7 +142,6 @@ int params(char *out)
 {
 	int argcount = 0;
 	char *seperator = " argument ";
-	/* printf("\nparams, out: %s\n", out); */
 
 	if (gettoken() != ')') {
 		do {
@@ -153,13 +150,10 @@ int params(char *out)
 				gettoken();
 			if (declaration(NO) != OK)
 				return ERROR;
-			/* printf("\nadding dec: %s\n", dec); */
 			strcat(out, seperator);
 			strcat(out, dec);
 			seperator = " and argument ";
 		} while (tokentype == ',');
-		/* printf("\nargcount %d, blah = %d/%c", argcount, tokentype,
-		       tokentype); */
 	}
 
 	if (tokentype == ')') {
@@ -181,9 +175,8 @@ int gettoken(void)
 
 	ws();
 
-	if (!(oparens() || brackets(p) || parseid(p)))
+	if (!(oparens() || brackets(p) || name(p)))
 		tokentype = getch();
-	/* printf("returning tkntype: %d/%c\n", tokentype, tokentype); */
 	return tokentype;
 }
 
@@ -198,7 +191,7 @@ int ws(void)
 	return rslt;
 }
 
-int parseid(char *p)
+int name(char *p)
 {
 	char c, *tkn;
 	int i, rslt = 0;
@@ -248,18 +241,6 @@ int oparens(void)
 	return 0;
 }
 
-/* int cparens(void)
-{
-	char c;
-
-	if ((c = getch()) == ')') {
-		tokentype = ')';
-		return 1;
-	}
-	ungetch(c);
-	return 0;
-} */
-
 void nextline(void)
 {
 	int c;
@@ -270,16 +251,9 @@ void nextline(void)
 		ungetch(c);
 }
 
-char printc(char c)
-{
-/* 	if (c != EOF && c != '\n')
-		printf("%c", c); */
-	return c;
-}
-
 int getch(void)
 {
-	return (bufp > 0) ? buf[--bufp] : printc(getchar());
+	return (bufp > 0) ? buf[--bufp] : getchar();
 }
 
 void ungetch(int c)

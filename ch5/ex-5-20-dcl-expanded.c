@@ -71,7 +71,7 @@ void nextline(void)
 {
 	int c;
 
-	while ((c = getch()) != '\n' && c != EOF)
+	while ((c = getch()) != ';' && c != EOF)
 		;
 	if (c == EOF)
 		ungetch(c);
@@ -113,13 +113,6 @@ int dirdcl(void)
 			if ((rslt = params()) != 0) {
 				return rslt;
 			}
-			if (cparens())
-				strcat(out, " and returning");
-			else {
-				printf("\nerror: expected closing parentheses "
-				       "after paramaters\n");
-				return ERROR;
-			}
 		} else {
 			strcat(out, " array");
 			strcat(out, token);
@@ -130,7 +123,21 @@ int dirdcl(void)
 
 int params(void)
 {
-	strcat(out, " no arguments");
+	int argcount = 0;
+	if (gettoken() != ')') {
+		do {
+			argcount++;
+		} while (gettoken() == ',');
+	}
+	if (argcount == 0)
+		strcat(out, " no arguments");
+	if (tokentype == ')')
+		strcat(out, " and returning");
+	else {
+		printf("\nerror: expected closing parentheses "
+		       "after paramaters\n");
+		return ERROR;
+	}
 	return OK;
 }
 
@@ -140,13 +147,7 @@ int gettoken(void)
 
 	ws();
 
-	if (oparens())
-		;
-	else if (brackets(p))
-		;
-	else if (parseid(p))
-		;
-	else
+	if (!(oparens() || brackets(p) || parseid(p)))
 		tokentype = getch();
 	return tokentype;
 }
@@ -212,7 +213,7 @@ int oparens(void)
 	return 0;
 }
 
-int cparens(void)
+/* int cparens(void)
 {
 	char c;
 
@@ -222,7 +223,7 @@ int cparens(void)
 	}
 	ungetch(c);
 	return 0;
-}
+} */
 
 char printc(char c)
 {

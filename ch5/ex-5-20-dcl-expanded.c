@@ -13,7 +13,7 @@
 
 enum { NAME, TYPE, BRACKETS };
 enum { OK = 0, ERROR };
-enum { YES = 0, NO };
+enum { NO = 0, YES };
 
 int declaration(int reqname);
 
@@ -47,8 +47,10 @@ int cparens(void);
 int main(void)
 {
 	while (gettoken() != EOF)
-		if (declaration(YES) != OK)
+		if (declaration(YES) != OK) {
 			nextline();
+			return 0; /* for testing */
+		}
 	return 0;
 }
 
@@ -67,19 +69,9 @@ int declaration(int reqname)
 		return ERROR;
 	} else {
 		printf("\n");
-		printf("%s: %s %s\n\n", id, out, datatype);
+		printf("%s:%s %s\n\n", id, out, datatype);
 	}
 	return OK;
-}
-
-void nextline(void)
-{
-	int c;
-
-	while ((c = getch()) != ';' && c != EOF)
-		;
-	if (c == EOF)
-		ungetch(c);
 }
 
 int dcl(int reqname)
@@ -97,7 +89,8 @@ int dcl(int reqname)
 
 int dirdcl(int reqname)
 {
-	int type, rslt;
+	int rslt;
+	int gotnext = NO;
 
 	if (tokentype == '(') {
 		if ((rslt = dcl(reqname)) != OK)
@@ -108,12 +101,18 @@ int dirdcl(int reqname)
 		}
 	} else if (tokentype == NAME)
 		strcpy(id, token);
-	else {
+	else if (!reqname) {
+		reqname = YES;
+		id[0] = '\0';
+		gotnext = YES;
+	} else {
 		printf("\nerror: expected name or (dcl)\n");
 		return ERROR;
 	}
-	while ((type = gettoken()) == '(' || type == BRACKETS)
-		if (type == '(') {
+	if (!gotnext)
+		gettoken();
+	while (tokentype == '(' || tokentype == BRACKETS) {
+		if (tokentype == '(') {
 			strcat(out, " function taking");
 			if ((rslt = params()) != 0) {
 				return rslt;
@@ -123,6 +122,8 @@ int dirdcl(int reqname)
 			strcat(out, token);
 			strcat(out, " of");
 		}
+		gettoken();
+	}
 	return OK;
 }
 
@@ -229,6 +230,16 @@ int oparens(void)
 	ungetch(c);
 	return 0;
 } */
+
+void nextline(void)
+{
+	int c;
+
+	while ((c = getch()) != ';' && c != EOF)
+		;
+	if (c == EOF)
+		ungetch(c);
+}
 
 char printc(char c)
 {

@@ -13,11 +13,12 @@
 
 enum { NAME, TYPE, BRACKETS };
 enum { OK = 0, ERROR };
+enum { YES = 0, NO };
 
-int declaration(void);
+int declaration(int reqname);
 
-int dcl(void);
-int dirdcl(void);
+int dcl(int reqname);
+int dirdcl(int reqname);
 
 void nextline(void);
 int gettoken(void);
@@ -46,12 +47,12 @@ int cparens(void);
 int main(void)
 {
 	while (gettoken() != EOF)
-		if (declaration() != OK)
+		if (declaration(YES) != OK)
 			nextline();
 	return 0;
 }
 
-int declaration(void)
+int declaration(int reqname)
 {
 	if (tokentype != TYPE) {
 		printf("\nerror: Expected a type\n");
@@ -59,7 +60,7 @@ int declaration(void)
 	}
 	strcpy(datatype, token);
 	out[0] = '\0';
-	if (dcl() != OK) {
+	if (dcl(reqname) != OK) {
 		return ERROR;
 	} else if (tokentype != ';') {
 		printf("\nsytax error\n");
@@ -81,25 +82,25 @@ void nextline(void)
 		ungetch(c);
 }
 
-int dcl(void)
+int dcl(int reqname)
 {
 	int ns, rslt;
 
 	for (ns = 0; gettoken() == '*';)
 		ns++;
-	if ((rslt = dirdcl()) != OK)
+	if ((rslt = dirdcl(reqname)) != OK)
 		return rslt;
 	while (ns-- > 0)
 		strcat(out, " pointer to");
 	return OK;
 }
 
-int dirdcl(void)
+int dirdcl(int reqname)
 {
 	int type, rslt;
 
 	if (tokentype == '(') {
-		if ((rslt = dcl()) != OK)
+		if ((rslt = dcl(reqname)) != OK)
 			return rslt;
 		if (tokentype != ')') {
 			printf("\nerror: missing )\n");

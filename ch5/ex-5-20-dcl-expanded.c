@@ -14,6 +14,8 @@
 enum { NAME, TYPE, BRACKETS };
 enum { OK = 0, ERROR };
 
+int declaration(void);
+
 int dcl(void);
 int dirdcl(void);
 
@@ -43,28 +45,30 @@ int cparens(void);
 
 int main(void)
 {
-	int rslt;
-
-	while (gettoken() != EOF) {
-		if (tokentype != TYPE) {
-			printf("\nerror: Expected a type\n");
-			return 0;
-		}
-		strcpy(datatype, token);
-		out[0] = '\0';
-		if ((rslt = dcl()) != OK) {
+	while (gettoken() != EOF)
+		if (declaration() != OK)
 			nextline();
-			return 0;
-		} else if (tokentype != ';') {
-			printf("\nsytax error\n");
-			nextline();
-			return 0;
-		} else {
-			printf("\n");
-			printf("%s: %s %s\n\n", id, out, datatype);
-		}
-	}
 	return 0;
+}
+
+int declaration(void)
+{
+	if (tokentype != TYPE) {
+		printf("\nerror: Expected a type\n");
+		return ERROR;
+	}
+	strcpy(datatype, token);
+	out[0] = '\0';
+	if (dcl() != OK) {
+		return ERROR;
+	} else if (tokentype != ';') {
+		printf("\nsytax error\n");
+		return ERROR;
+	} else {
+		printf("\n");
+		printf("%s: %s %s\n\n", id, out, datatype);
+	}
+	return OK;
 }
 
 void nextline(void)

@@ -164,7 +164,7 @@ int params(char *out)
 
 	if (tokentype == ')') {
 		if (argcount == 0)
-			strcat(out, " no arguments");
+			strcat(out, " argument : void");
 		strcat(out, " and returning");
 	} else {
 		printf("\nerror: expected closing parentheses "

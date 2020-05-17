@@ -22,3 +22,6 @@ long C(int A(), char B(int A()));
 float D(int A(), char B(int AA()), long C(int AAA(), char BB(int A())));
 
 double Z(char (*(*x())[])(), char (*(*y())[])());
+
+long apples();
+long banana(void);

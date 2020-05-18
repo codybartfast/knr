@@ -15,7 +15,7 @@
 #define BUFSIZE (1 << 1)
 
 enum { TYPE, VAR, BRACKETS };
-enum { OK = 0, ERROR };
+enum { OK = 0, ERROR, NXTTOKENUNEXP };
 enum { NO = 0, YES };
 
 int declaration(int reqname);
@@ -99,20 +99,34 @@ int dcl(char *name, char *out, int reqname)
 
 int dirdcl(char *name, char *out, int reqname)
 {
-	int rslt;
 	int gotnext = NO;
+	int rslt, prslt;
 
-	if (tokentype == VAR)
+	if (tokentype == VAR) {
 		strcpy(name, token);
-	else if (tokentype == '(') {
-		if ((rslt = dcl(name, out, reqname)) != OK)
-			return rslt;
-		if (tokentype != ')') {
-			printf("\nerror: missing )\n");
-			return ERROR;
+	} else if (tokentype == '(') {
+		if (reqname) {
+			if ((rslt = dcl(name, out, reqname)) != OK)
+				return rslt;
+			if (tokentype != ')') {
+				printf("\nerror: missing )\n");
+				return ERROR;
+			}
+		} else if ((prslt = params(out)) == NXTTOKENUNEXP) {
+			if ((rslt = dcl(name, out, reqname)) != OK)
+				return rslt;
+			if (tokentype != ')') {
+				printf("\nerror: missing )\n");
+				return ERROR;
+			}
+		} else if (prslt != OK) {
+			return prslt;
+		} else {
+			reqname = YES;
+			name[0] = '\0';
 		}
+
 	} else if (!reqname) {
-		/* doesn't support anonymous functions */
 		reqname = YES;
 		name[0] = '\0';
 		gotnext = YES;
@@ -124,8 +138,7 @@ int dirdcl(char *name, char *out, int reqname)
 		gettoken();
 	while (tokentype == '(' || tokentype == BRACKETS) {
 		if (tokentype == '(') {
-			strcat(out, " function taking");
-			if ((rslt = params(out)) != 0) {
+			if ((rslt = params(out)) != OK) {
 				return rslt;
 			}
 		} else {
@@ -144,9 +157,12 @@ int params(char *out)
 	char *seperator = " argument ";
 
 	if (gettoken() != ')') {
+		if (tokentype != TYPE) {
+			return NXTTOKENUNEXP;
+		}
+		strcat(out, " function taking");
 		do {
-			argcount++;
-			if (tokentype == ',')
+			if (argcount++ > 0)
 				gettoken();
 			if (declaration(NO) != OK)
 				return ERROR;
@@ -158,7 +174,7 @@ int params(char *out)
 
 	if (tokentype == ')') {
 		if (argcount == 0)
-			strcat(out, " argument : void");
+			strcat(out, " function taking argument : void");
 		strcat(out, " and returning");
 	} else {
 		printf("\nerror: expected closing parentheses "

@@ -1,16 +1,9 @@
-
-
-int dcl();int dirdcl();
-int gettoken();
-int tokentype;
-char token[100];
 char **argv;
 int (*daytab)[13];
 int *daytab[13];
 void *comp();
 void (*comp)();
 char (*(*x())[])();
-
 char (*(*x[3])())[5];
 
 int A();
@@ -21,8 +14,10 @@ long C(int A(), char B(int A()));
 
 float D(int A(), char B(int AA()), long C(int AAA(), char BB(int A())));
 
-double Z(char (*(*x[3])())[5], char (*(*y[3])())[5]);
-double Z(char (*(*x[3])())[5], char (*(*[3])())[5]);
-
-long apples();
-long banana(void);
+char **argv;
+int (*)[13];
+int *[13];
+void *();
+void (*)();
+char (*(*())[])();
+char (*(*[3])())[5];

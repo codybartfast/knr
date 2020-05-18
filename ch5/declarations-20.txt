@@ -1,10 +1,29 @@
 char **argv;
-int (*daytab)[13];
-int *daytab[13];
-void *comp();
-void (*comp)();
+int (*daytabs)[13];
+int *daytaby[13];
+void *comps();
+void (*compy)();
 char (*(*x())[])();
-char (*(*x[3])())[5];
+char (*(*y[3])())[5];
+
+
+double add(double, double);
+int fun(char **);
+int fun(int (*)[13]);
+int fun(int *[13]);
+
+
+char (*(*y[3])(
+	char (*(*x())[])(),
+	void *comps(
+		char **argv
+	),
+	void (*compy)(
+		int (*daytabs)[13], 
+		int *daytaby[13]
+	)
+))[5];
+
 
 int A();
 
@@ -12,12 +31,4 @@ char B(int A());
 
 long C(int A(), char B(int A()));
 
-float D(int A(), char B(int AA()), long C(int AAA(), char BB(int A())));
-
-char **argv;
-int (*)[13];
-int *[13];
-void *();
-void (*)();
-char (*(*())[])();
-char (*(*[3])())[5];
+float A(int AA(), char BB(int AAA()), long CC(int AAA(), char BBB(int AAAA())));

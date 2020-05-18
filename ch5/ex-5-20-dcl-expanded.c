@@ -15,7 +15,7 @@
 #define BUFSIZE (1 << 1)
 
 enum { TYPE, VAR, BRACKETS };
-enum { OK = 0, ERROR, NXTTOKENUNEXP };
+enum { OK = 0, ERROR };
 enum { NO = 0, YES };
 
 int declaration(int reqname);
@@ -27,8 +27,6 @@ void nextline(void);
 int gettoken(void);
 int tokentype;
 char token[SYMSIZE];
-/* char name[SYMSIZE]; */
-/* char out[MSGSIZE]; */
 char dec[MSGSIZE];
 
 char printc(char c);
@@ -49,12 +47,10 @@ int oparens(void);
 int main(void)
 {
 	while (gettoken() != EOF) {
-		/* out[0] = '\0'; */
 		if (declaration(YES) != OK) {
 			nextline();
-			return 0; /* for testing */
 		}
-		printf("\nTADA: %s\n\n", dec);
+		printf("\n%s\n", dec);
 	}
 	return 0;
 }
@@ -99,34 +95,20 @@ int dcl(char *name, char *out, int reqname)
 
 int dirdcl(char *name, char *out, int reqname)
 {
+	int rslt;
 	int gotnext = NO;
-	int rslt, prslt;
 
-	if (tokentype == VAR) {
+	if (tokentype == VAR)
 		strcpy(name, token);
-	} else if (tokentype == '(') {
-		if (reqname) {
-			if ((rslt = dcl(name, out, reqname)) != OK)
-				return rslt;
-			if (tokentype != ')') {
-				printf("\nerror: missing )\n");
-				return ERROR;
-			}
-		} else if ((prslt = params(out)) == NXTTOKENUNEXP) {
-			if ((rslt = dcl(name, out, reqname)) != OK)
-				return rslt;
-			if (tokentype != ')') {
-				printf("\nerror: missing )\n");
-				return ERROR;
-			}
-		} else if (prslt != OK) {
-			return prslt;
-		} else {
-			reqname = YES;
-			name[0] = '\0';
+	else if (tokentype == '(') {
+		if ((rslt = dcl(name, out, reqname)) != OK)
+			return rslt;
+		if (tokentype != ')') {
+			printf("\nerror: missing )\n");
+			return ERROR;
 		}
-
 	} else if (!reqname) {
+		/* basic anonymous arg declarations */
 		reqname = YES;
 		name[0] = '\0';
 		gotnext = YES;
@@ -138,7 +120,8 @@ int dirdcl(char *name, char *out, int reqname)
 		gettoken();
 	while (tokentype == '(' || tokentype == BRACKETS) {
 		if (tokentype == '(') {
-			if ((rslt = params(out)) != OK) {
+			strcat(out, " function taking");
+			if ((rslt = params(out)) != 0) {
 				return rslt;
 			}
 		} else {
@@ -157,12 +140,8 @@ int params(char *out)
 	char *seperator = " argument ";
 
 	if (gettoken() != ')') {
-		if (tokentype != TYPE) {
-			return NXTTOKENUNEXP;
-		}
-		strcat(out, " function taking");
 		do {
-			if (argcount++ > 0)
+						if (argcount++ > 0)
 				gettoken();
 			if (declaration(NO) != OK)
 				return ERROR;
@@ -174,8 +153,8 @@ int params(char *out)
 
 	if (tokentype == ')') {
 		if (argcount == 0)
-			strcat(out, " function taking argument : void");
-		strcat(out, " and returning");
+			strcat(out, " argument : void");
+		strcat(out, " returning");
 	} else {
 		printf("\nerror: expected closing parentheses "
 		       "after paramaters (got %d/%c)\n",

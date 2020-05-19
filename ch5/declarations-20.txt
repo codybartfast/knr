@@ -6,6 +6,8 @@ void (*compy)();
 char (*(*x())[])();
 char (*(*y[3])())[5];
 
+double add(double a, double b);
+double square(double a, double (*mult)(double a, double b));
 
 double add(double, double);
 int fun(char **);

@@ -19,30 +19,31 @@ enum { OK = 0, ERROR };
 enum { NO = 0, YES };
 
 int declaration(int reqname);
-
 int dcl(char *name, char *out, int reqname);
 int dirdcl(char *name, char *out, int reqname);
+int params(char *out);
 
-void nextline(void);
 int gettoken(void);
+int ws(void);
+int name(char *p);
+int brackets(char *p);
+int oparens(void);
+void nextline(void);
+
+int getch(void);
+void ungetch(int c);
+
 int tokentype;
 char token[SYMSIZE];
 char dec[MSGSIZE];
-
-char printc(char c);
-int getch(void);
-void ungetch(int c);
 int buf[BUFSIZE];
 int bufp = 0;
 
 char *types[] = { "void",  "char",   "short",  "int",	  "long",
 		  "float", "double", "signed", "unsigned" };
 int ntypes = 9;
-int params(char *out);
-int ws(void);
-int name(char *p);
-int brackets(char *p);
-int oparens(void);
+
+volatile static int x;
 
 int main(void)
 {
@@ -121,7 +122,7 @@ int dirdcl(char *name, char *out, int reqname)
 	while (tokentype == '(' || tokentype == BRACKETS) {
 		if (tokentype == '(') {
 			strcat(out, " function taking");
-			if ((rslt = params(out)) != 0) {
+			if ((rslt = params(out)) != NO) {
 				return rslt;
 			}
 		} else {
@@ -141,7 +142,7 @@ int params(char *out)
 
 	if (gettoken() != ')') {
 		do {
-						if (argcount++ > 0)
+			if (argcount++ > 0)
 				gettoken();
 			if (declaration(NO) != OK)
 				return ERROR;
@@ -178,10 +179,10 @@ int gettoken(void)
 int ws(void)
 {
 	char c;
-	int rslt = 0;
+	int rslt = NO;
 
 	while ((c = getch()) == ' ' || c == '\t' || c == '\n')
-		rslt = 1;
+		rslt = YES;
 	ungetch(c);
 	return rslt;
 }
@@ -189,11 +190,11 @@ int ws(void)
 int name(char *p)
 {
 	char c, *tkn;
-	int i, rslt = 0;
+	int i, rslt = NO;
 
 	tkn = p;
 	if (isalpha(c = getch())) {
-		rslt = 1;
+		rslt = YES;
 		for (*p++ = c; isalnum(c = getch());)
 			*p++ = c;
 		*p = '\0';
@@ -218,10 +219,10 @@ int brackets(char *p)
 			;
 		*p = '\0';
 		tokentype = BRACKETS;
-		return 1;
+		return YES;
 	}
 	ungetch(c);
-	return 0;
+	return NO;
 }
 
 int oparens(void)
@@ -230,10 +231,10 @@ int oparens(void)
 
 	if ((c = getch()) == '(') {
 		tokentype = '(';
-		return 1;
+		return YES;
 	}
 	ungetch(c);
-	return 0;
+	return NO;
 }
 
 void nextline(void)

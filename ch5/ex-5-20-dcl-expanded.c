@@ -13,8 +13,9 @@
 #define SYMSIZE (1 << 10)
 #define MSGSIZE (1 << 10)
 #define BUFSIZE (1 << 1)
+#define TKBUFSIZE (1 << 4)
 
-enum { TYPE, VAR, BRACKETS };
+enum { STORE, QUAL, TYPE, VAR, BRACKETS };
 enum { OK = 0, ERROR };
 enum { NO = 0, YES };
 
@@ -24,6 +25,7 @@ int dirdcl(char *name, char *out, int reqname);
 int params(char *out);
 
 int gettoken(void);
+void ungettoken(void);
 int ws(void);
 int name(char *p);
 int brackets(char *p);
@@ -36,14 +38,22 @@ void ungetch(int c);
 int tokentype;
 char token[SYMSIZE];
 char dec[MSGSIZE];
+
 int buf[BUFSIZE];
 int bufp = 0;
+char *tkbuf[TKBUFSIZE];
+int ttbuf[TKBUFSIZE];
+int tkbufp = 0;
 
 char *types[] = { "void",  "char",   "short",  "int",	  "long",
 		  "float", "double", "signed", "unsigned" };
 int ntypes = 9;
 
-volatile static int x;
+char *stores[] = { "auto", "register", "static", "extern" };
+int nstores = 4;
+
+char *quals[] = { "const", "volatile" };
+int nquals = 2;
 
 int main(void)
 {
@@ -58,25 +68,43 @@ int main(void)
 
 int declaration(int reqname)
 {
-	char *datatype;
+	char decspec[MSGSIZE];
+	char store[SYMSIZE];
+	char qual[SYMSIZE];
 	char name[SYMSIZE];
 	char out[MSGSIZE];
 
+	decspec[0] = '\0';
+	store[0] = '\0';
+	qual[0] = '\0';
 	out[0] = '\0';
 
-	if (tokentype != TYPE) {
-		printf("\nerror: Expected a type\n");
-		return ERROR;
+	if(tokentype == STORE){
+		sprintf(store, " in %s storage", token);
+		gettoken();
 	}
-	datatype = malloc((strlen(token) + 1) * sizeof(char));
-	strcpy(datatype, token);
+	if(tokentype == QUAL){
+		sprintf(qual, " %s", token);
+		gettoken();
+	}
+	do {
+		if (tokentype != TYPE) {
+			printf("\nerror: Expected a type\n");
+			return ERROR;
+		}
+		if (decspec[0] != '\0')
+			strcat(decspec, " ");
+		strcat(decspec, token);
+	} while (gettoken() == TYPE);
+	ungettoken();
+
 	if (dcl(name, out, reqname) != OK) {
 		return ERROR;
 	} else if (tokentype != ';' && tokentype != ',' && tokentype != ')') {
 		printf("\nsytax error, got %d/%c\n", tokentype, tokentype);
 		return ERROR;
 	} else {
-		sprintf(dec, "%s:%s %s", name, out, datatype);
+		sprintf(dec, "%s:%s%s %s%s", name, qual, out, decspec, store);
 	}
 	return OK;
 }
@@ -167,13 +195,40 @@ int params(char *out)
 
 int gettoken(void)
 {
-	char *p = token;
-
-	ws();
-
-	if (!(oparens() || brackets(p) || name(p)))
-		tokentype = getch();
+	/* printf("get token %d\n", tkbufp);
+	printf("hmm...\n"); */
+	if (tkbufp > 0) {
+		--tkbufp;
+		/* printf("unstashing ");
+		printf("%s\n", tkbuf[tkbufp]); */
+		strcpy(token, tkbuf[tkbufp]);
+		free(tkbuf[tkbufp]);
+		tokentype = ttbuf[tkbufp];
+		/* printf("done unstashing "); */
+	} else {
+		/* printf("regular gettoken\n"); */
+		ws();
+		if (!(oparens() || brackets(token) || name(token))) {
+			token[0] = tokentype = getch();
+			token[1] = '\0';
+		}
+	}
 	return tokentype;
+}
+
+void ungettoken(void)
+{
+	if (tkbufp >= TKBUFSIZE) {
+		printf("ungettoken: too many tokens\n");
+	} else {
+		char *copy = malloc((strlen(token) + 1) * sizeof(char));
+		/* printf("stashing %s\n", token); */
+		strcpy(copy, token);
+		tkbuf[tkbufp] = copy;
+		ttbuf[tkbufp] = tokentype;
+		/* printf("done stashing: %d\n", tkbufp); */
+		tkbufp++;
+	}
 }
 
 int ws(void)
@@ -205,6 +260,18 @@ int name(char *p)
 				break;
 			}
 		}
+		for (i = 0; i < nstores; i++) {
+			if (strcmp(tkn, stores[i]) == 0) {
+				tokentype = STORE;
+				break;
+			}
+		}
+		for (i = 0; i < nquals; i++) {
+			if (strcmp(tkn, quals[i]) == 0) {
+				tokentype = QUAL;
+				break;
+			}
+		}
 	}
 	ungetch(c);
 	return rslt;
@@ -230,7 +297,8 @@ int oparens(void)
 	char c;
 
 	if ((c = getch()) == '(') {
-		tokentype = '(';
+		token[0] = tokentype = '(';
+		token[1] = '\0';
 		return YES;
 	}
 	ungetch(c);

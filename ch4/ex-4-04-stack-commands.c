@@ -113,7 +113,7 @@ double pop(void)
 void peek(void)
 {
 	if (sp > 0)
-		printf("peek: %g\n", val[sp - 1']);
+		printf("peek: %g\n", val[sp - 1]);
 	else
 		printf("error: stack empty\n");
 }

@@ -19,9 +19,9 @@ enum { STORE, QUAL, TYPE, VAR, BRACKETS };
 enum { OK = 0, ERROR };
 enum { NO = 0, YES };
 
-int declaration(int reqname);
-int dcl(char *name, char *out, int reqname);
-int dirdcl(char *name, char *out, int reqname);
+int declaration(void);
+int dcl(char *name, char *out);
+int dirdcl(char *name, char *out);
 int params(char *out);
 
 int gettoken(void);
@@ -58,7 +58,7 @@ int nquals = 2;
 int main(void)
 {
 	while (gettoken() != EOF) {
-		if (declaration(YES) != OK) {
+		if (declaration() != OK) {
 			nextline();
 		}
 		printf("\n%s\n", dec);
@@ -66,7 +66,7 @@ int main(void)
 	return 0;
 }
 
-int declaration(int reqname)
+int declaration(void)
 {
 	char decspec[MSGSIZE];
 	char store[SYMSIZE];
@@ -79,11 +79,11 @@ int declaration(int reqname)
 	qual[0] = '\0';
 	out[0] = '\0';
 
-	if(tokentype == STORE){
+	if (tokentype == STORE) {
 		sprintf(store, " in %s storage", token);
 		gettoken();
 	}
-	if(tokentype == QUAL){
+	if (tokentype == QUAL) {
 		sprintf(qual, " %s", token);
 		gettoken();
 	}
@@ -98,7 +98,7 @@ int declaration(int reqname)
 	} while (gettoken() == TYPE);
 	ungettoken();
 
-	if (dcl(name, out, reqname) != OK) {
+	if (dcl(name, out) != OK) {
 		return ERROR;
 	} else if (tokentype != ';' && tokentype != ',' && tokentype != ')') {
 		printf("\nsytax error, got %d/%c\n", tokentype, tokentype);
@@ -109,45 +109,37 @@ int declaration(int reqname)
 	return OK;
 }
 
-int dcl(char *name, char *out, int reqname)
+int dcl(char *name, char *out)
 {
 	int ns, rslt;
 
 	for (ns = 0; gettoken() == '*';)
 		ns++;
-	if ((rslt = dirdcl(name, out, reqname)) != OK)
+	if ((rslt = dirdcl(name, out)) != OK)
 		return rslt;
 	while (ns-- > 0)
 		strcat(out, " pointer to");
 	return OK;
 }
 
-int dirdcl(char *name, char *out, int reqname)
+int dirdcl(char *name, char *out)
 {
 	int rslt;
-	int gotnext = NO;
 
 	if (tokentype == VAR)
 		strcpy(name, token);
 	else if (tokentype == '(') {
-		if ((rslt = dcl(name, out, reqname)) != OK)
+		if ((rslt = dcl(name, out)) != OK)
 			return rslt;
 		if (tokentype != ')') {
 			printf("\nerror: missing )\n");
 			return ERROR;
 		}
-	} else if (!reqname) {
-		/* basic anonymous arg declarations */
-		reqname = YES;
-		name[0] = '\0';
-		gotnext = YES;
 	} else {
 		printf("\nerror: expected variable name or (dcl)\n");
 		return ERROR;
 	}
-	if (!gotnext)
-		gettoken();
-	while (tokentype == '(' || tokentype == BRACKETS) {
+	while (gettoken() == '(' || tokentype == BRACKETS) {
 		if (tokentype == '(') {
 			strcat(out, " function taking");
 			if ((rslt = params(out)) != NO) {
@@ -158,7 +150,6 @@ int dirdcl(char *name, char *out, int reqname)
 			strcat(out, token);
 			strcat(out, " of");
 		}
-		gettoken();
 	}
 	return OK;
 }
@@ -172,7 +163,7 @@ int params(char *out)
 		do {
 			if (argcount++ > 0)
 				gettoken();
-			if (declaration(NO) != OK)
+			if (declaration() != OK)
 				return ERROR;
 			strcat(out, seperator);
 			strcat(out, dec);
@@ -195,18 +186,12 @@ int params(char *out)
 
 int gettoken(void)
 {
-	/* printf("get token %d\n", tkbufp);
-	printf("hmm...\n"); */
 	if (tkbufp > 0) {
 		--tkbufp;
-		/* printf("unstashing ");
-		printf("%s\n", tkbuf[tkbufp]); */
 		strcpy(token, tkbuf[tkbufp]);
 		free(tkbuf[tkbufp]);
 		tokentype = ttbuf[tkbufp];
-		/* printf("done unstashing "); */
 	} else {
-		/* printf("regular gettoken\n"); */
 		ws();
 		if (!(oparens() || brackets(token) || name(token))) {
 			token[0] = tokentype = getch();
@@ -222,11 +207,9 @@ void ungettoken(void)
 		printf("ungettoken: too many tokens\n");
 	} else {
 		char *copy = malloc((strlen(token) + 1) * sizeof(char));
-		/* printf("stashing %s\n", token); */
 		strcpy(copy, token);
 		tkbuf[tkbufp] = copy;
 		ttbuf[tkbufp] = tokentype;
-		/* printf("done stashing: %d\n", tkbufp); */
 		tkbufp++;
 	}
 }

@@ -5,7 +5,6 @@
  */
 
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
 
@@ -41,7 +40,8 @@ char dec[MSGSIZE];
 
 int buf[BUFSIZE];
 int bufp = 0;
-char *tkbuf[TKBUFSIZE];
+
+char tkbuf[TKBUFSIZE][SYMSIZE];
 int ttbuf[TKBUFSIZE];
 int tkbufp = 0;
 
@@ -189,7 +189,6 @@ int gettoken(void)
 	if (tkbufp > 0) {
 		--tkbufp;
 		strcpy(token, tkbuf[tkbufp]);
-		free(tkbuf[tkbufp]);
 		tokentype = ttbuf[tkbufp];
 	} else {
 		ws();
@@ -206,9 +205,7 @@ void ungettoken(void)
 	if (tkbufp >= TKBUFSIZE) {
 		printf("ungettoken: too many tokens\n");
 	} else {
-		char *copy = malloc((strlen(token) + 1) * sizeof(char));
-		strcpy(copy, token);
-		tkbuf[tkbufp] = copy;
+		strcpy(tkbuf[tkbufp], token);
 		ttbuf[tkbufp] = tokentype;
 		tkbufp++;
 	}

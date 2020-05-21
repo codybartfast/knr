@@ -17,7 +17,7 @@ enum { STORE, QUAL, TYPE, VAR, BRACKETS };
 enum { OK = 0, ERROR };
 enum { NO = 0, YES };
 
-int declaration(char *dec);
+int declaration(char *dec, int isdef);
 int dcl(char *name, char *out);
 int dirdcl(char *name, char *out);
 int params(char *out);
@@ -56,15 +56,14 @@ int main(void)
 {
 	char dec[MAXMSG];
 	while (gettoken() != EOF) {
-		if (declaration(dec) != OK) {
+		if (declaration(dec, YES) != OK) {
 			nextline();
 		}
-		printf("\n%s\n", dec);
 	}
 	return 0;
 }
 
-int declaration(char *dec)
+int declaration(char *dec, int isdef)
 {
 	char name[MAXSYMBL];
 	char qual[MAXSYMBL];
@@ -73,7 +72,6 @@ int declaration(char *dec)
 	char store[MAXSYMBL];
 
 	qual[0] = '\0';
-	out[0] = '\0';
 	type[0] = '\0';
 	store[0] = '\0';
 
@@ -96,14 +94,22 @@ int declaration(char *dec)
 	} while (gettoken() == TYPE);
 	ungettoken();
 
-	if (dcl(name, out) != OK) {
-		return ERROR;
-	} else if (tokentype != ';' && tokentype != ',' && tokentype != ')') {
-		printf("\nsytax error, got %d/%c\n", tokentype, tokentype);
-		return ERROR;
-	} else {
-		sprintf(dec, "%s:%s%s %s%s", name, qual, out, type, store);
-	}
+	do {
+		out[0] = '\0';
+		if (dcl(name, out) != OK) {
+			return ERROR;
+		} else if (tokentype != ';' && tokentype != ',' &&
+			   tokentype != ')') {
+			printf("\nsytax error, got %d/%c\n", tokentype,
+			       tokentype);
+			return ERROR;
+		} else {
+			sprintf(dec, "%s:%s%s %s%s", name, qual, out, type,
+				store);
+			if (isdef)
+				printf("\n%s\n", dec);
+		}
+	} while (isdef && tokentype == ',');
 	return OK;
 }
 
@@ -162,7 +168,7 @@ int params(char *out)
 		do {
 			if (argcount++ > 0)
 				gettoken();
-			if (declaration(dec) != OK)
+			if (declaration(dec, NO) != OK)
 				return ERROR;
 			strcat(out, seperator);
 			strcat(out, dec);

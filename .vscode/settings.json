@@ -7,6 +7,7 @@
         "ostream": "c",
         "tuple": "c",
         "type_traits": "c",
-        "utility": "c"
+        "utility": "c",
+        "typeinfo": "c"
     },
 }

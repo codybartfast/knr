@@ -1,36 +1,30 @@
-char **argv;
-int (*daytabs)[13];
-int *daytaby[13];
-void *comps();
-void (*compy)();
-char (*(*x())[])();
-char (*(*y[3])())[5];
+char **book1;
+int (*book2)[13];
+int *book3[13];
+void *book4();
+void (*book5)();
+char (*(*book6())[])();
+char (*(*book7[3])())[5];
 
-double add(double a, double b);
-double square(double a, double (*mult)(double a, double b));
+int simple;
 
-double add(double, double);
-int fun(char **);
-int fun(int (*)[13]);
-int fun(int *[13]);
+int dec, *larator, lists[];
 
+static char *storage;
 
-char (*(*y[3])(
-	char (*(*x())[])(),
-	void *comps(
-		char **argv
+volatile int qualifier;
+
+long unsigned int compound;
+
+void arguments(char *name, double time);
+
+int nested_args(char *(*read)(void), void (*write)(char *message));
+
+static const long unsigned int (*book2)[13], *book3[13], complex(
+	volatile char (*(*book6(void))[])(
+		char **book1,
+		void *book4(),
+		void (*book5)()
 	),
-	void (*compy)(
-		int (*daytabs)[13], 
-		int *daytaby[13]
-	)
-))[5];
-
-
-int A();
-
-char B(int A());
-
-long C(int A(), char B(int A()));
-
-float A(int AA(), char BB(int AAA()), long CC(int AAA(), char BBB(int AAAA())));
+	char (*(*book7[3])())[5]
+);

@@ -10,16 +10,16 @@
 
 #define MAXSYMBL (1 << 7)
 #define MAXMSG (1 << 10)
-#define MAXBUF (1 << 1)
+#define MAXCBUF (1 << 1)
 #define MAXTKBUF (1 << 1)
 
 int declaration(char *dec, int isdef);
 int dcl(char *name, char *out);
 int dirdcl(char *name, char *out);
-int params(char *out);
+int args(char *out);
 
 int gettoken(void);
-void ungettoken(void);
+void ungettoken(int ttype, char *tk);
 int ws(void);
 int name(char *p);
 int brackets(char *p);
@@ -37,8 +37,8 @@ enum { NO = 0, YES };
 int tokentype;
 char token[MAXSYMBL];
 
-int buf[MAXBUF];
-int bufp = 0;
+int cbuf[MAXCBUF];
+int cbufp = 0;
 
 int ttbuf[MAXTKBUF];
 char tkbuf[MAXTKBUF][MAXSYMBL];
@@ -92,7 +92,7 @@ int declaration(char *dec, int isdef)
 			strcat(type, " ");
 		strcat(type, token);
 	} while (gettoken() == TYPE);
-	ungettoken();
+	ungettoken(tokentype, token);
 
 	do {
 		out[0] = '\0';
@@ -146,7 +146,7 @@ int dirdcl(char *name, char *out)
 	while (gettoken() == '(' || tokentype == BRACKETS) {
 		if (tokentype == '(') {
 			strcat(out, " function taking");
-			if ((rslt = params(out)) != NO) {
+			if ((rslt = args(out)) != NO) {
 				return rslt;
 			}
 		} else {
@@ -158,7 +158,7 @@ int dirdcl(char *name, char *out)
 	return OK;
 }
 
-int params(char *out)
+int args(char *out)
 {
 	char dec[MAXMSG];
 	int argcount = 0;
@@ -168,16 +168,14 @@ int params(char *out)
 	if (gettoken() == ')') {
 		/* fun() */
 		haveargs = NO;
-	} else {
-		if (tokentype == TYPE && strcmp(token, "void") == 0) {
-			if (gettoken() == ')')
-				/* fun(void) */
-				haveargs = NO;
-			else {
-				ungettoken();
-				tokentype = TYPE;
-				strcpy(token, "void");
-			}
+	} else if (tokentype == TYPE && strcmp(token, "void") == 0) {
+		if (gettoken() == ')')
+			/* fun(void) */
+			haveargs = NO;
+		else {
+			ungettoken(tokentype, token);
+			tokentype = TYPE;
+			strcpy(token, "void");
 		}
 	}
 
@@ -195,10 +193,10 @@ int params(char *out)
 	if (tokentype == ')') {
 		if (!haveargs)
 			strcat(out, " no arguments");
-		strcat(out, ", that returns");
+		strcat(out, " returning");
 	} else {
 		printf("\nerror: expected closing parentheses "
-		       "after paramaters (got %d/%c)\n",
+		       "after arguments (got %d/%c)\n",
 		       tokentype, tokentype);
 		return ERROR;
 	}
@@ -221,13 +219,13 @@ int gettoken(void)
 	return tokentype;
 }
 
-void ungettoken(void)
+void ungettoken(int ttype, char *tk)
 {
 	if (tkbufp >= MAXTKBUF) {
 		printf("ungettoken: too many tokens\n");
 	} else {
-		ttbuf[tkbufp] = tokentype;
-		strcpy(tkbuf[tkbufp], token);
+		ttbuf[tkbufp] = ttype;
+		strcpy(tkbuf[tkbufp], tk);
 		tkbufp++;
 	}
 }
@@ -317,13 +315,86 @@ int contains(char **names, int count, char *name)
 
 int getch(void)
 {
-	return (bufp > 0) ? buf[--bufp] : getchar();
+	return (cbufp > 0) ? cbuf[--cbufp] : getchar();
 }
 
 void ungetch(int c)
 {
-	if (bufp >= MAXBUF)
+	if (cbufp >= MAXCBUF)
 		printf("ungetch: too many characters\n");
 	else
-		buf[bufp++] = c;
+		cbuf[cbufp++] = c;
 }
+
+/*
+ * input
+ *
+
+int simple;
+
+int dec, *larator, lists[];
+
+static char *storage;
+
+volatile int qualifier;
+
+long unsigned int compound;
+
+void arguments(char *name, double time);
+
+int nested_args(char *(*read)(void), void (*write)(char *message));
+
+static const long unsigned int (*book2)[13], *book3[13], complex(
+	volatile char (*(*book6(void))[])(
+		char **book1,
+		void *book4(),
+		void (*book5)()
+	),
+	char (*(*book7[3])())[5]
+);
+
+ *
+ * output
+ *
+
+simple: int
+
+dec: int
+
+larator: pointer to int
+
+lists: array[] of int
+
+storage: pointer to char in static storage
+
+qualifier: volatile int
+
+compound: long unsigned int
+
+arguments: function taking argument name: pointer to char and argument time:
+double returning void
+
+nested_args: function taking argument read: pointer to function taking no
+arguments returning pointer to char and argument write: pointer to function
+taking argument message: pointer to char returning void returning int
+
+book2: const pointer to array[13] of long unsigned int in static storage
+
+book3: const array[13] of pointer to long unsigned int in static storage
+
+complex: const function taking argument
+	book6: volatile function taking no arguments returning pointer to
+	array[] of pointer to function taking argument
+		book1: pointer to pointer to char
+	and argument
+		book4: function taking no arguments returning pointer to void
+	and argument
+		book5: pointer to function taking no arguments returning void
+	returning char
+and argument
+	book7: array[3] of pointer to function taking no arguments returning
+	pointer to array[5] of char
+returning long unsigned int in static storage
+
+ *
+ */

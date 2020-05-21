@@ -13,10 +13,6 @@
 #define MAXBUF (1 << 1)
 #define MAXTKBUF (1 << 1)
 
-enum { STORE, QUAL, TYPE, VAR, BRACKETS };
-enum { OK = 0, ERROR };
-enum { NO = 0, YES };
-
 int declaration(char *dec, int isdef);
 int dcl(char *name, char *out);
 int dirdcl(char *name, char *out);
@@ -25,14 +21,18 @@ int params(char *out);
 int gettoken(void);
 void ungettoken(void);
 int ws(void);
-int contains(char **names, int count, char *name);
 int name(char *p);
 int brackets(char *p);
 int oparens(char *p);
-void nextline(void);
+int contains(char **names, int count, char *name);
 
+void nextline(void);
 int getch(void);
 void ungetch(int c);
+
+enum { STORE, QUAL, TYPE, VAR, BRACKETS };
+enum { OK = 0, ERROR };
+enum { NO = 0, YES };
 
 int tokentype;
 char token[MAXSYMBL];
@@ -65,15 +65,15 @@ int main(void)
 
 int declaration(char *dec, int isdef)
 {
-	char name[MAXSYMBL];
-	char qual[MAXSYMBL];
-	char out[MAXMSG];
-	char type[MAXMSG];
 	char store[MAXSYMBL];
+	char qual[MAXSYMBL];
+	char type[MAXMSG];
+	char name[MAXSYMBL];
+	char out[MAXMSG];
 
+	store[0] = '\0';
 	qual[0] = '\0';
 	type[0] = '\0';
-	store[0] = '\0';
 
 	if (tokentype == STORE) {
 		sprintf(store, " in %s storage", token);
@@ -163,8 +163,25 @@ int params(char *out)
 	char dec[MAXMSG];
 	int argcount = 0;
 	char *seperator = " argument ";
+	int haveargs = YES;
 
-	if (gettoken() != ')') {
+	if (gettoken() == ')') {
+		/* fun() */
+		haveargs = NO;
+	} else {
+		if (tokentype == TYPE && strcmp(token, "void") == 0) {
+			if (gettoken() == ')')
+				/* fun(void) */
+				haveargs = NO;
+			else {
+				ungettoken();
+				tokentype = TYPE;
+				strcpy(token, "void");
+			}
+		}
+	}
+
+	if (haveargs) {
 		do {
 			if (argcount++ > 0)
 				gettoken();
@@ -176,9 +193,9 @@ int params(char *out)
 		} while (tokentype == ',');
 	}
 	if (tokentype == ')') {
-		if (argcount == 0)
-			strcat(out, " argument : void");
-		strcat(out, " returning");
+		if (!haveargs)
+			strcat(out, " no arguments");
+		strcat(out, ", that returns");
 	} else {
 		printf("\nerror: expected closing parentheses "
 		       "after paramaters (got %d/%c)\n",
@@ -226,25 +243,15 @@ int ws(void)
 	return rslt;
 }
 
-int contains(char **names, int count, char *name)
-{
-	int i;
-
-	for (i = 0; i < count; i++)
-		if (strcmp(name, names[i]) == 0)
-			return YES;
-	return NO;
-}
-
 int name(char *p)
 {
 	char c, *tkn;
 	int rslt = NO;
 
 	tkn = p;
-	if (isalpha(c = getch())) {
+	if (isalpha(c = getch()) || c == '_') {
 		rslt = YES;
-		for (*p++ = c; isalnum(c = getch());)
+		for (*p++ = c; isalnum(c = getch()) || c == '_';)
 			*p++ = c;
 		*p = '\0';
 		if (contains(types, ntypes, tkn))
@@ -296,6 +303,16 @@ void nextline(void)
 		;
 	if (c == EOF)
 		ungetch(c);
+}
+
+int contains(char **names, int count, char *name)
+{
+	int i;
+
+	for (i = 0; i < count; i++)
+		if (strcmp(name, names[i]) == 0)
+			return YES;
+	return NO;
 }
 
 int getch(void)

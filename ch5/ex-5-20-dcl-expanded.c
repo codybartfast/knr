@@ -30,7 +30,7 @@ int brackets(char *p);
 int oparens(char *p);
 int contains(char **names, int count, char *name);
 
-void nextline(void);
+void nextdef(void);
 int getch(void);
 void ungetch(int c);
 
@@ -57,7 +57,7 @@ int main(void)
 	char dec[MAXMSG];
 	while (gettoken() != EOF) {
 		if (declaration(dec, YES) != OK) {
-			nextline();
+			nextdef();
 		}
 	}
 	return 0;
@@ -293,7 +293,7 @@ int oparens(char *p)
 	return NO;
 }
 
-void nextline(void)
+void nextdef(void)
 {
 	int c;
 

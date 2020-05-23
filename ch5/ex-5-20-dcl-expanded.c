@@ -10,8 +10,12 @@
 
 #define MAXSYMBL (1 << 7)
 #define MAXMSG (1 << 10)
-#define MAXCBUF (1 << 1)
+#define MAXCHBUF (1 << 1)
 #define MAXTKBUF (1 << 1)
+
+enum { STORE, QUAL, TYPE, VAR, BRACKETS };
+enum { OK = 0, ERROR };
+enum { NO = 0, YES };
 
 int declaration(char *dec, int isdef);
 int dcl(char *name, char *out);
@@ -30,15 +34,11 @@ void nextline(void);
 int getch(void);
 void ungetch(int c);
 
-enum { STORE, QUAL, TYPE, VAR, BRACKETS };
-enum { OK = 0, ERROR };
-enum { NO = 0, YES };
-
 int tokentype;
 char token[MAXSYMBL];
 
-int cbuf[MAXCBUF];
-int cbufp = 0;
+int chbuf[MAXCHBUF];
+int chbufp = 0;
 
 int ttbuf[MAXTKBUF];
 char tkbuf[MAXTKBUF][MAXSYMBL];
@@ -163,15 +163,15 @@ int args(char *out)
 	char dec[MAXMSG];
 	int argcount = 0;
 	char *seperator = " argument ";
-	int haveargs = YES;
+	int expectarg = YES;
 
 	if (gettoken() == ')') {
 		/* fun() */
-		haveargs = NO;
+		expectarg = NO;
 	} else if (tokentype == TYPE && strcmp(token, "void") == 0) {
 		if (gettoken() == ')')
 			/* fun(void) */
-			haveargs = NO;
+			expectarg = NO;
 		else {
 			ungettoken(tokentype, token);
 			tokentype = TYPE;
@@ -179,7 +179,7 @@ int args(char *out)
 		}
 	}
 
-	if (haveargs) {
+	if (expectarg) {
 		do {
 			if (argcount++ > 0)
 				gettoken();
@@ -191,7 +191,7 @@ int args(char *out)
 		} while (tokentype == ',');
 	}
 	if (tokentype == ')') {
-		if (!haveargs)
+		if (argcount == 0)
 			strcat(out, " no arguments");
 		strcat(out, " returning");
 	} else {
@@ -315,15 +315,15 @@ int contains(char **names, int count, char *name)
 
 int getch(void)
 {
-	return (cbufp > 0) ? cbuf[--cbufp] : getchar();
+	return (chbufp > 0) ? chbuf[--chbufp] : getchar();
 }
 
 void ungetch(int c)
 {
-	if (cbufp >= MAXCBUF)
+	if (chbufp >= MAXCHBUF)
 		printf("ungetch: too many characters\n");
 	else
-		cbuf[cbufp++] = c;
+		chbuf[chbufp++] = c;
 }
 
 /*

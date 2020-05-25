@@ -235,7 +235,7 @@ int ws(void)
 	char c;
 	int rslt = NO;
 
-	while ((c = getch()) == ' ' || c == '\t' || c == '\n')
+	while (isspace(c = getch()))
 		rslt = YES;
 	ungetch(c);
 	return rslt;

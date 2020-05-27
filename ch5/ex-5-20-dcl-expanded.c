@@ -65,8 +65,8 @@ int main(void)
 
 int declaration(char *dec, int isdef)
 {
-	char store[MAXSYMBL];
-	char qual[MAXSYMBL];
+	char store[MAXSYMBL + 12];
+	char qual[MAXSYMBL + 12];
 	char type[MAXMSG];
 	char name[MAXSYMBL];
 	char out[MAXMSG];

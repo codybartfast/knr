@@ -18,8 +18,8 @@ enum { OK = 0, ERROR };
 enum { NO = 0, YES };
 
 int declaration(char *dec, int isdef);
-int dcl(char *name, char *out);
-int dirdcl(char *name, char *out);
+int dcl(char *name, char *out, int allowanon);
+int dirdcl(char *name, char *out, int allowanon);
 int args(char *out);
 
 int gettoken(void);
@@ -96,7 +96,7 @@ int declaration(char *dec, int isdef)
 
 	do {
 		out[0] = '\0';
-		if (dcl(name, out) != OK) {
+		if (dcl(name, out, !isdef) != OK) {
 			return ERROR;
 		} else if (tokentype != ';' && tokentype != ',' &&
 			   tokentype != ')') {
@@ -113,32 +113,36 @@ int declaration(char *dec, int isdef)
 	return OK;
 }
 
-int dcl(char *name, char *out)
+int dcl(char *name, char *out, int allowanon)
 {
 	int ns, rslt;
 
 	for (ns = 0; gettoken() == '*';)
 		ns++;
-	if ((rslt = dirdcl(name, out)) != OK)
+	if ((rslt = dirdcl(name, out, allowanon)) != OK)
 		return rslt;
 	while (ns-- > 0)
 		strcat(out, " pointer to");
 	return OK;
 }
 
-int dirdcl(char *name, char *out)
+int dirdcl(char *name, char *out, int allowanon)
 {
 	int rslt;
 
 	if (tokentype == VAR)
 		strcpy(name, token);
 	else if (tokentype == '(') {
-		if ((rslt = dcl(name, out)) != OK)
+		if ((rslt = dcl(name, out, allowanon)) != OK)
 			return rslt;
 		if (tokentype != ')') {
 			printf("\nerror: missing )\n");
 			return ERROR;
 		}
+	} else if(allowanon){
+		name[0] = '\0';
+		allowanon = NO;
+		ungettoken(tokentype, token);
 	} else {
 		printf("\nerror: expected variable name or (dcl)\n");
 		return ERROR;

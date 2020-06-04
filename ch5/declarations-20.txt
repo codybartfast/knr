@@ -28,3 +28,9 @@ static const long unsigned int (*book2)[13], *book3[13], complex(
 	),
 	char (*(*book7[3])())[5]
 );
+
+void none(void);
+void anything(void x);
+void number(int x);
+void anynum(int);
+void funny(char (*blah)(long));

@@ -12,12 +12,13 @@
 #define MAXMSG (1 << 10)
 #define MAXCHBUF (1 << 1)
 #define MAXTKBUF (1 << 1)
+#define MAXBOILER (1 << 4)
 
 enum { STORE, QUAL, TYPE, VAR, BRACKETS };
 enum { OK = 0, ERROR };
 enum { NO = 0, YES };
 
-int declaration(char *dec, int isdef);
+int declaration(char *dec, int ispara);
 int dcl(char *name, char *out, int allowanon);
 int dirdcl(char *name, char *out, int allowanon);
 int args(char *out);
@@ -56,17 +57,17 @@ int main(void)
 {
 	char dec[MAXMSG];
 	while (gettoken() != EOF) {
-		if (declaration(dec, YES) != OK) {
+		if (declaration(dec, NO) != OK) {
 			nextdef();
 		}
 	}
 	return 0;
 }
 
-int declaration(char *dec, int isdef)
+int declaration(char *dec, int ispara)
 {
-	char store[MAXSYMBL + 12];
-	char qual[MAXSYMBL + 12];
+	char store[MAXSYMBL + MAXBOILER];
+	char qual[MAXSYMBL + MAXBOILER];
 	char type[MAXMSG];
 	char name[MAXSYMBL];
 	char out[MAXMSG];
@@ -96,7 +97,7 @@ int declaration(char *dec, int isdef)
 
 	do {
 		out[0] = '\0';
-		if (dcl(name, out, !isdef) != OK) {
+		if (dcl(name, out, ispara) != OK) {
 			return ERROR;
 		} else if (tokentype != ';' && tokentype != ',' &&
 			   tokentype != ')') {
@@ -106,10 +107,10 @@ int declaration(char *dec, int isdef)
 		} else {
 			sprintf(dec, "%s:%s%s %s%s", name, qual, out, type,
 				store);
-			if (isdef)
+			if (!ispara)
 				printf("\n%s\n", dec);
 		}
-	} while (isdef && tokentype == ',');
+	} while (!ispara && tokentype == ',');
 	return OK;
 }
 
@@ -139,8 +140,8 @@ int dirdcl(char *name, char *out, int allowanon)
 			printf("\nerror: missing )\n");
 			return ERROR;
 		}
-	} else if(allowanon){
-		name[0] = '\0';
+	} else if (allowanon) {
+		strcpy(name, "<unnamed>");
 		allowanon = NO;
 		ungettoken(tokentype, token);
 	} else {
@@ -187,7 +188,7 @@ int args(char *out)
 		do {
 			if (argcount++ > 0)
 				gettoken();
-			if (declaration(dec, NO) != OK)
+			if (declaration(dec, YES) != OK)
 				return ERROR;
 			strcat(out, seperator);
 			strcat(out, dec);

@@ -18,12 +18,21 @@ struct key {
 	int count;
 } keytab[] = { { "auto", 0 },	  { "break", 0 },    { "case", 0 },
 	       { "char", 0 },	  { "const", 0 },    { "continue", 0 },
-	       { "default", 0 },  { "unsigned", 0 }, { "void", 0 },
+	       { "default", 0 },  { "do", 0 },	     { "double", 0 },
+	       { "else", 0 },	  { "enum", 0 },     { "extern", 0 },
+	       { "float", 0 },	  { "for", 0 },	     { "goto", 0 },
+	       { "if", 0 },	  { "int", 0 },	     { "long", 0 },
+	       { "register", 0 }, { "return", 0 },   { "short", 0 },
+	       { "signed", 0 },	  { "sizeof", 0 },   { "static", 0 },
+	       { "struct", 0 },	  { "switch", 0 },   { "typedef", 0 },
+	       { "union", 0 },	  { "unsigned", 0 }, { "void", 0 },
 	       { "volatile", 0 }, { "while", 0 } };
 
 int filtered(void);
 int getword(char *, int);
 int binsearch(char *, struct key *, int);
+int asalpha(char c);
+int asalnum(char c);
 
 int nkeys;
 struct filterstate filterstate;
@@ -79,15 +88,25 @@ int getword(char *word, int lim)
 		;
 	if (c != EOF)
 		*w++ = c;
-	if (!isalpha(c)) {
+	if (!asalpha(c)) {
 		*w = '\0';
 		return c;
 	}
 	for (; --lim > 0; w++)
-		if (!isalnum(*w = getch(filteredstream))) {
+		if (!asalnum(*w = getch(filteredstream))) {
 			ungetch(filteredstream, *w);
 			break;
 		}
 	*w = '\0';
 	return word[0];
+}
+
+/* is character we treat As alphabetic */
+int asalpha(char c){
+	return isalpha(c) || c == '_';
+}
+
+/* is character we treat As alphabetic or is numeric */
+int asalnum(char c){
+	return isalnum(c) || c == '_';
 }

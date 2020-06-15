@@ -8,7 +8,7 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <string.h>
-#include "stream.h"
+#include "filter-code.h"
 
 #define MAXWORD 100
 #define NKEYS (sizeof keytab / sizeof(struct key))
@@ -21,10 +21,14 @@ struct key {
 	       { "default", 0 },  { "unsigned", 0 }, { "void", 0 },
 	       { "volatile", 0 }, { "while", 0 } };
 
+int filtered(void);
 int getword(char *, int);
 int binsearch(char *, struct key *, int);
 
 int nkeys;
+struct filterstate filterstate;
+int filterbuff[MAXCHBUF];
+struct stream filteredstream = { filtered, filterbuff, 0 };
 
 int main(void)
 {
@@ -40,6 +44,11 @@ int main(void)
 		if (keytab[n].count > 0)
 			printf("%4d %s\n", keytab[n].count, keytab[n].word);
 	return 0;
+}
+
+int filtered(void)
+{
+	return filter_code(streamin, filterstate);
 }
 
 int binsearch(char *word, struct key tab[], int n)
@@ -66,7 +75,7 @@ int getword(char *word, int lim)
 	int c;
 	char *w = word;
 
-	while (isspace(c = getch(streamin)))
+	while (isspace(c = getch(filteredstream)))
 		;
 	if (c != EOF)
 		*w++ = c;
@@ -75,8 +84,8 @@ int getword(char *word, int lim)
 		return c;
 	}
 	for (; --lim > 0; w++)
-		if (!isalnum(*w = getch(streamin))) {
-			ungetch(streamin, *w);
+		if (!isalnum(*w = getch(filteredstream))) {
+			ungetch(filteredstream, *w);
 			break;
 		}
 	*w = '\0';

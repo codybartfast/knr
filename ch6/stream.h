@@ -4,7 +4,6 @@ struct stream streamin;
 
 struct stream {
 	int (*read)(void);
-	int current;
 	int *chbuf;
 	int chbufidx;
 };

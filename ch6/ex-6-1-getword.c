@@ -8,7 +8,7 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <string.h>
-#include "getch.h"
+#include "stream.h"
 
 #define MAXWORD 100
 #define NKEYS (sizeof keytab / sizeof(struct key))
@@ -63,11 +63,10 @@ int binsearch(char *word, struct key tab[], int n)
 
 int getword(char *word, int lim)
 {
-	int c, getch(void);
-	void ungetch(int);
+	int c;
 	char *w = word;
 
-	while (isspace(c = getch()))
+	while (isspace(c = getch(streamin)))
 		;
 	if (c != EOF)
 		*w++ = c;
@@ -76,8 +75,8 @@ int getword(char *word, int lim)
 		return c;
 	}
 	for (; --lim > 0; w++)
-		if (!isalnum(*w = getch())) {
-			ungetch(*w);
+		if (!isalnum(*w = getch(streamin))) {
+			ungetch(streamin, *w);
 			break;
 		}
 	*w = '\0';

@@ -3,7 +3,7 @@
 struct stream streamin;
 
 struct stream {
-	int (*read)(void);
+	int (*getcharacter)(void);
 	int *chbuf;
 	int chbufidx;
 };

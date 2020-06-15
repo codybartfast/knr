@@ -1,5 +1,3 @@
-#define STREAM_UNSET -2
-
 #include <stdio.h>
 #include "stream.h"
 
@@ -10,7 +8,7 @@ int getch(struct stream stream)
 {
 	return (stream.chbufidx > 0) ?
 				 stream.chbuf[--stream.chbufidx] :
-				 stream.read();
+				 stream.getcharacter();
 }
 
 void ungetch(struct stream stream, int c)

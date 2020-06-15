@@ -34,6 +34,7 @@ int filter_code(struct stream stream, struct filterstate state)
 			return c;
 		}
 	case PREPROC:
+		/* Assumes preproc statements are single line */
 		switch (c) {
 		case '\n':
 			state.mode = CODE;

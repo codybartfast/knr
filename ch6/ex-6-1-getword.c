@@ -55,6 +55,7 @@ int main(void)
 	return 0;
 }
 
+/* like getch, but preproc, comments and strings are removed */
 int filtered(void)
 {
 	return filter_code(streamin, filterstate);

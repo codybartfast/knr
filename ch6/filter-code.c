@@ -31,7 +31,7 @@ int filter_code(struct stream stream, struct filterstate state)
 			state.mode = DOUBLE;
 			return filter_code(stream, state);
 		case '\'':
-			state.mode = DOUBLE;
+			state.mode = SINGLE;
 			return filter_code(stream, state);
 		default:
 			return c;

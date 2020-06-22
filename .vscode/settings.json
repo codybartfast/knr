@@ -1,4 +1,22 @@
 {
     "editor.tabSize": 8,
     "editor.insertSpaces": false,
+    "files.associations": {
+        "*.tcc": "c",
+        "unordered_map": "c",
+        "memory_resource": "c",
+        "algorithm": "c",
+        "functional": "c",
+        "memory": "c",
+        "random": "c",
+        "fstream": "c",
+        "initializer_list": "c",
+        "istream": "c",
+        "streambuf": "c",
+        "cmath": "c",
+        "tuple": "c",
+        "utility": "c",
+        "type_traits": "c",
+        "typeinfo": "c"
+    },
 }

@@ -14,60 +14,79 @@
 
 #define MAXWORD 100
 
-struct tnode *addtree(struct tnode *, char *);
-void treeprint(struct tnode *);
-
-struct tnode {
+struct wnode {
 	char *word;
-	int count;
-	struct tnode *left;
-	struct tnode *right;
+	struct wnode *left;
+	struct wnode *right;
 };
+
+struct knode {
+	char *key;
+	struct wnode *wtree;
+	struct knode *left;
+	struct knode *right;
+};
+
+char *getkey(char *word);
+struct knode *addkey(struct knode *, char *k, char *w);
+void kprint(struct knode *);
+
+char key[MAXWORD];
+int keylen = 3;
 
 int main(void)
 {
-	struct tnode *root;
+	struct knode *ktree;
 	char word[MAXWORD];
 
-	root = NULL;
+	ktree = NULL;
 	while (getword(word, MAXWORD) != EOF)
-		if (asalpha(word[0]))
-			root = addtree(root, word);
-	treeprint(root);
+		if (asalpha(word[0])) {
+			printf("    %s -> %s\n", word, getkey(word));
+			ktree = addkey(ktree, getkey(word), word);
+		}
+	kprint(ktree);
 	return 0;
 }
 
-struct tnode *talloc(void);
+char *getkey(char *word)
+{
+ 	int i;
+	char *k = key;
+	for (i = 0; i < keylen && *word; i++, k++, word++)
+		*k = *word;
+	*k = '\0';
+	return key;
+}
 
-struct tnode *addtree(struct tnode *p, char *w)
+struct knode *kalloc(void);
+
+struct knode *addkey(struct knode *p, char *k, char *w)
 {
 	int cond;
-
 	if (p == NULL) {
-		p = talloc();
-		p->word = strdup(w);
-		p->count = 1;
+		p = kalloc();
+		p->key = strdup(k);
 		p->left = p->right = NULL;
-	} else if ((cond = strcmp(w, p->word)) == 0)
-		p->count++;
-	else if (cond < 0)
-		p->left = addtree(p->left, w);
+	} else if ((cond = strcmp(k, p->key)) == 0) {
+	} else if (cond < 0)
+		p->left = addkey(p->left, k, w);
 	else
-		p->right = addtree(p->right, w);
+		p->right = addkey(p->right, k, w);
 	return p;
 }
 
-struct tnode *talloc(void)
+struct knode *kalloc(void)
 {
-	return (struct tnode *)malloc(sizeof(struct tnode));
+	return (struct knode *)malloc(sizeof(struct knode));
 }
 
-void treeprint(struct tnode *p)
+void kprint(struct knode *p)
 {
 	if (p != NULL) {
-		treeprint(p->left);
-		printf("%4d %s\n", p->count, p->word);
-		treeprint(p->right);
+		kprint(p->left);
+		printf("%s\n", p->key);
+		kprint(p->right);
 	}
 }
 

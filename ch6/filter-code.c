@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include "filter-code.h"
 
-enum filtermode { CODE = 0, PREPROC, COMMENT, DOUBLE};
+enum filtermode { CODE = 0, PREPROC, COMMENT, DOUBLE, SINGLE };
 
 struct filterstate newfilterstate(void)
 {
@@ -28,6 +28,9 @@ int filter_code(struct stream stream, struct filterstate state)
 				return '/';
 			}
 		case '"':
+			state.mode = DOUBLE;
+			return filter_code(stream, state);
+		case '\'':
 			state.mode = DOUBLE;
 			return filter_code(stream, state);
 		default:
@@ -61,9 +64,18 @@ int filter_code(struct stream stream, struct filterstate state)
 		case '\\':
 			if (getch(stream) == EOF)
 				return EOF;
-			/* ignore escaped char */
+			else { /* ignore escaped char */
+			}
 			return filter_code(stream, state);
 		case '"':
+			state.mode = CODE;
+			return filter_code(stream, state);
+		default:
+			return filter_code(stream, state);
+		}
+	case SINGLE:
+		switch (c) {
+		case '\'':
 			state.mode = CODE;
 			return filter_code(stream, state);
 		default:

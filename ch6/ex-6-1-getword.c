@@ -8,7 +8,6 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <string.h>
-#include "filter-code.h"
 
 #define MAXWORD 100
 #define NKEYS (sizeof keytab / sizeof(struct key))
@@ -91,7 +90,7 @@ int getword(char *word, int lim)
 		*w++ = c;
 	if (!asalpha(c)) {
 		*w = '\0';
-		return c;
+			return c;
 	}
 	for (; --lim > 0; w++)
 		if (!asalnum(*w = getch(filteredstream))) {

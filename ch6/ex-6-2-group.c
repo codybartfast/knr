@@ -14,11 +14,7 @@
 
 #define MAXWORD 100
 
-struct wnode {
-	char *word;
-	struct wnode *left;
-	struct wnode *right;
-};
+char *getkey(char *word);
 
 struct knode {
 	char *key;
@@ -26,13 +22,21 @@ struct knode {
 	struct knode *left;
 	struct knode *right;
 };
-
-char *getkey(char *word);
 struct knode *addkey(struct knode *, char *k, char *w);
+struct knode *kalloc(void);
 void kprint(struct knode *);
 
+struct wnode {
+	char *word;
+	struct wnode *left;
+	struct wnode *right;
+};
+struct wnode *addword(struct wnode *, char *w);
+struct wnode *walloc(void);
+void wprint(struct wnode *);
+
 char key[MAXWORD];
-int keylen = 3;
+int keylen = 1;
 
 int main(void)
 {
@@ -41,10 +45,8 @@ int main(void)
 
 	ktree = NULL;
 	while (getword(word, MAXWORD) != EOF)
-		if (asalpha(word[0])) {
-			printf("    %s -> %s\n", word, getkey(word));
+		if (asalpha(word[0]))
 			ktree = addkey(ktree, getkey(word), word);
-		}
 	kprint(ktree);
 	return 0;
 }
@@ -59,8 +61,6 @@ char *getkey(char *word)
 	return key;
 }
 
-struct knode *kalloc(void);
-
 struct knode *addkey(struct knode *p, char *k, char *w)
 {
 	int cond;
@@ -68,7 +68,9 @@ struct knode *addkey(struct knode *p, char *k, char *w)
 		p = kalloc();
 		p->key = strdup(k);
 		p->left = p->right = NULL;
+		p->wtree = addword(NULL, w);
 	} else if ((cond = strcmp(k, p->key)) == 0) {
+		p->wtree = addword(p->wtree, w);
 	} else if (cond < 0)
 		p->left = addkey(p->left, k, w);
 	else
@@ -85,8 +87,38 @@ void kprint(struct knode *p)
 {
 	if (p != NULL) {
 		kprint(p->left);
-		printf("%s\n", p->key);
+		printf("%s:\n", p->key);
+		wprint(p->wtree);
 		kprint(p->right);
+	}
+}
+
+struct wnode *addword(struct wnode *p, char *w)
+{
+	int cond;
+	if (p == NULL) {
+		p = walloc();
+		p->word = strdup(w);
+		p->left = p->right = NULL;
+	} else if ((cond = strcmp(w, p->word)) == 0) {
+	} else if (cond < 0)
+		p->left = addword(p->left, w);
+	else
+		p->right = addword(p->right, w);
+	return p;
+}
+
+struct wnode *walloc(void)
+{
+	return (struct wnode *)malloc(sizeof(struct wnode));
+}
+
+void wprint(struct wnode *p)
+{
+	if (p != NULL) {
+		wprint(p->left);
+		printf("    %s\n", p->word);
+		wprint(p->right);
 	}
 }
 

@@ -5,4 +5,4 @@ struct filterstate {
 };
 
 struct filterstate newfilterstate(void);
-int filter_code(struct stream stream, struct filterstate state);
+int filter_code(struct stream *stream, struct filterstate state);

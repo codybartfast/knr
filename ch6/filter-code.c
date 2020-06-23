@@ -9,7 +9,7 @@ struct filterstate newfilterstate(void)
 	return s;
 }
 
-int filter_code(struct stream stream, struct filterstate state)
+int filter_code(struct stream *stream, struct filterstate state)
 {
 	int c = getch(stream);
 

@@ -44,7 +44,7 @@ int main(void)
 	char word[MAXWORD];
 	nkeys = (sizeof keytab / sizeof(struct key));
 
-	while (getword(filteredstream, word, MAXWORD) != EOF)
+	while (getword(&filteredstream, word, MAXWORD) != EOF)
 		if (isalpha(word[0]))
 			if ((n = binsearch(word, keytab, nkeys)) >= 0)
 				keytab[n].count++;
@@ -57,7 +57,7 @@ int main(void)
 /* like getch, but preproc, comments and strings are removed */
 int filtered(void)
 {
-	return filter_code(streamin, filterstate);
+	return filter_code(&streamin, filterstate);
 }
 
 int binsearch(char *word, struct key tab[], int n)

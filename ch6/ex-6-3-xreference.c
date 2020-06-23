@@ -22,10 +22,10 @@ int *zepbra;
 
 int main(void)
 {
+	struct wordinfo *wi;
 	char word[MAXWORD];
 
-	while (getword(streamin, word, MAXWORD) != EOF)
-		if (isalpha(word[0]))
-			printf("%s\n", word);
+	while ((wi = getwordinfo(&streamin, word, MAXWORD)) != NULL)
+		printf("%d:%d %s\n", wi->line, wi->pos, wi->word);
 	return 0;
 }

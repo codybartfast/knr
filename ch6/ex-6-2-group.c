@@ -44,8 +44,7 @@ void wprint(struct wnode *);
 
 int filtered(void);
 struct filterstate filterstate;
-int filterbuff[MAXCHBUF];
-struct stream filteredstream = { filtered, filterbuff, 0 };
+struct stream filteredstream;
 
 void parseargs(int argc, char *argv[]);
 int isreserved(char *word, char *reserved[], int n);
@@ -62,9 +61,10 @@ int main(int argc, char *argv[])
 
 	nreserved = (sizeof reserved / sizeof(char *));
 
+	filteredstream = *newstream(&filtered);
 	parseargs(argc, argv);
 	ktree = NULL;
-	while (getword(filteredstream, word, MAXWORD) != EOF)
+	while (getword(&filteredstream, word, MAXWORD) != EOF)
 		if (asalpha(word[0]) &&
 		    !(isreserved(word, reserved, nreserved))) {
 			ktree = addkey(ktree, getkey(word), word);
@@ -89,7 +89,7 @@ void parseargs(int argc, char *argv[])
 
 int filtered(void)
 {
-	return filter_code(streamin, filterstate);
+	return filter_code(&streamin, filterstate);
 }
 
 int isreserved(char *word, char *reserved[], int n)

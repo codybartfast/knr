@@ -4,23 +4,18 @@
 #include <string.h>
 #include "getword.h"
 
-struct wordinfo {
-	char *word;
-};
-
-int getword(struct stream stream, char *word, int lim)
+int getword(struct stream *stream, char *word, int lim)
 {
 	if (getwordinfo(stream, word, lim) == NULL)
 		return EOF;
 	return *word;
 }
 
-struct wordinfo *getwordinfo(struct stream stream, char *word, int lim)
+struct wordinfo *getwordinfo(struct stream *stream, char *word, int lim)
 {
 	int c;
 	char *w = word;
-	struct wordinfo *wi =
-		(struct wordinfo *)malloc(sizeof(struct wordinfo));
+	struct wordinfo *wi;
 
 	while (isspace(c = getch(stream)))
 		;
@@ -28,15 +23,21 @@ struct wordinfo *getwordinfo(struct stream stream, char *word, int lim)
 		return NULL;
 	*w++ = c;
 	if (asalpha(c)) {
-		for (; --lim > 0; w++)
+		wi = (struct wordinfo *)malloc(sizeof(struct wordinfo));		
+		wi->line = stream->line + 1;
+		wi->pos = stream->pos;
+		for (; --lim > 0; w++) {
 			if (!asalnum(*w = getch(stream))) {
 				ungetch(stream, *w);
 				break;
 			}
+		}
+		*w = '\0';
+		wi->word = strdup(word);
+
+		return wi;  
 	}
-	*w = '\0';
-	wi->word = strdup(word);
-	return wi;
+	return getwordinfo(stream, word, lim);
 }
 
 /* is character we treat As alphabetic */

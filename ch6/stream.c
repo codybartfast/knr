@@ -6,9 +6,8 @@ struct stream streamin = { getchar, inbuff, 0 };
 
 int getch(struct stream stream)
 {
-	return (stream.chbufidx > 0) ?
-				 stream.chbuf[--stream.chbufidx] :
-				 stream.getcharacter();
+	return (stream.chbufidx > 0) ? stream.chbuf[--stream.chbufidx] :
+				       stream.getcharacter();
 }
 
 void ungetch(struct stream stream, int c)

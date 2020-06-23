@@ -1,7 +1,7 @@
 /*
  * Exercise 6-1
- * 
- * Our version of getword does not properly handle underscores, string 
+ *
+ * Our version of getword does not properly handle underscores, string
  * constants, comments or preprocesor control lines.  Write a better version.
  */
 
@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <string.h>
 #include "filter-code.h"
+#include "getword.h"
 
 #define MAXWORD 100
 #define NKEYS (sizeof keytab / sizeof(struct key))
@@ -28,16 +29,14 @@ struct key {
 	       { "union", 0 },	  { "unsigned", 0 }, { "void", 0 },
 	       { "volatile", 0 }, { "while", 0 } };
 
-int filtered(void);
-int getword(char *, int);
-int binsearch(char *, struct key *, int);
-int asalpha(char c);
-int asalnum(char c);
-
 int nkeys;
+
+int filtered(void);
 struct filterstate filterstate;
 int filterbuff[MAXCHBUF];
 struct stream filteredstream = { filtered, filterbuff, 0 };
+
+int binsearch(char *, struct key *, int);
 
 int main(void)
 {
@@ -45,7 +44,7 @@ int main(void)
 	char word[MAXWORD];
 	nkeys = (sizeof keytab / sizeof(struct key));
 
-	while (getword(word, MAXWORD) != EOF)
+	while (getword(filteredstream, word, MAXWORD) != EOF)
 		if (isalpha(word[0]))
 			if ((n = binsearch(word, keytab, nkeys)) >= 0)
 				keytab[n].count++;
@@ -78,36 +77,4 @@ int binsearch(char *word, struct key tab[], int n)
 			return mid;
 	}
 	return -1;
-}
-
-int getword(char *word, int lim)
-{
-	int c;
-	char *w = word;
-
-	while (isspace(c = getch(filteredstream)))
-		;
-	if (c != EOF)
-		*w++ = c;
-	if (!asalpha(c)) {
-		*w = '\0';
-			return c;
-	}
-	for (; --lim > 0; w++)
-		if (!asalnum(*w = getch(filteredstream))) {
-			ungetch(filteredstream, *w);
-			break;
-		}
-	*w = '\0';
-	return word[0];
-}
-
-/* is character we treat As alphabetic */
-int asalpha(char c){
-	return isalpha(c) || c == '_';
-}
-
-/* is character we treat As alphabetic or is numeric */
-int asalnum(char c){
-	return isalnum(c) || c == '_';
 }

@@ -1,27 +1,18 @@
 #include <ctype.h>
 #include <stdio.h>
-#include "filter-code.h"
+#include "getword.h"
 
-int getword(char *, int);
-int asalpha(char c);
-int asalnum(char c);
-
-int filtered(void);
-struct filterstate filterstate;
-int filterbuff[MAXCHBUF];
-struct stream filteredstream = { filtered, filterbuff, 0 };
-
-int filtered(void)
+int getword(struct stream stream, char *word, int lim)
 {
-	return filter_code(streamin, filterstate);
+	return getwordinfo(stream, word, lim);
 }
 
-int getword(char *word, int lim)
+int getwordinfo(struct stream stream, char *word, int lim)
 {
 	int c;
 	char *w = word;
 
-	while (isspace(c = getch(filteredstream)))
+	while (isspace(c = getch(stream)))
 		;
 	if (c != EOF)
 		*w++ = c;
@@ -30,8 +21,8 @@ int getword(char *word, int lim)
 		return c;
 	}
 	for (; --lim > 0; w++)
-		if (!asalnum(*w = getch(filteredstream))) {
-			ungetch(filteredstream, *w);
+		if (!asalnum(*w = getch(stream))) {
+			ungetch(stream, *w);
 			break;
 		}
 	*w = '\0';

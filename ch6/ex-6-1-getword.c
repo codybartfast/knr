@@ -8,6 +8,7 @@
 #include <ctype.h>
 #include <stdio.h>
 #include <string.h>
+#include "filter-code.h"
 
 #define MAXWORD 100
 #define NKEYS (sizeof keytab / sizeof(struct key))

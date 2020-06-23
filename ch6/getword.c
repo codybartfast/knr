@@ -1,32 +1,42 @@
 #include <ctype.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include "getword.h"
+
+struct wordinfo {
+	char *word;
+};
 
 int getword(struct stream stream, char *word, int lim)
 {
-	return getwordinfo(stream, word, lim);
+	if (getwordinfo(stream, word, lim) == NULL)
+		return EOF;
+	return *word;
 }
 
-int getwordinfo(struct stream stream, char *word, int lim)
+struct wordinfo *getwordinfo(struct stream stream, char *word, int lim)
 {
 	int c;
 	char *w = word;
+	struct wordinfo *wi =
+		(struct wordinfo *)malloc(sizeof(struct wordinfo));
 
 	while (isspace(c = getch(stream)))
 		;
-	if (c != EOF)
-		*w++ = c;
-	if (!asalpha(c)) {
-		*w = '\0';
-		return c;
+	if (c == EOF)
+		return NULL;
+	*w++ = c;
+	if (asalpha(c)) {
+		for (; --lim > 0; w++)
+			if (!asalnum(*w = getch(stream))) {
+				ungetch(stream, *w);
+				break;
+			}
 	}
-	for (; --lim > 0; w++)
-		if (!asalnum(*w = getch(stream))) {
-			ungetch(stream, *w);
-			break;
-		}
 	*w = '\0';
-	return word[0];
+	wi->word = strdup(word);
+	return wi;
 }
 
 /* is character we treat As alphabetic */

@@ -6,9 +6,11 @@
  * words like "the," "and," and so on.
  */
 
+// malloc getword/strdup,wordinfo
 // case insensitive
 // remove noise words
 // check 6-1, 6-2
+// free
 
 #include <ctype.h>
 #include <stdio.h>

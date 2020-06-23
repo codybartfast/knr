@@ -7,7 +7,6 @@
  * comments.  Make 6 a parameter that can be set from the command line.
  */
 
-// ignore keywords
 // handle *vaname
 
 #include <stdio.h>
@@ -16,6 +15,8 @@
 #include "getword.h"
 
 #define MAXWORD 100
+
+int *zebra;
 
 struct reserved {
 	char *word;

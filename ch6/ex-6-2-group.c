@@ -7,8 +7,7 @@
  * comments.  Make 6 a parameter that can be set from the command line.
  */
 
-// check malloc
-// pass input
+// parse input
 // ignore keywords
 // handle *vaname
 
@@ -18,8 +17,6 @@
 #include "getword.h"
 
 #define MAXWORD 100
-
-char *getkey(char *word);
 
 struct knode {
 	char *key;
@@ -40,14 +37,18 @@ struct wnode *addword(struct wnode *, char *w);
 struct wnode *walloc(void);
 void wprint(struct wnode *);
 
+void parseargs(int argc, char *argv[]);
+char *getkey(char *word);
+
 char key[MAXWORD];
 int keylen = 1;
 
-int main(void)
+int main(int argc, char *argv[])
 {
 	struct knode *ktree;
 	char word[MAXWORD];
 
+	parseargs(argc, argv);
 	ktree = NULL;
 	while (getword(word, MAXWORD) != EOF)
 		if (asalpha(word[0])) {
@@ -59,6 +60,16 @@ int main(void)
 		}
 	kprint(ktree);
 	return 0;
+}
+
+void parseargs(int argc, char *argv[])
+{
+	int len;
+	
+	if (!(argc == 2))
+		return;
+	len = atoi(*++argv);
+	keylen = len ? len : keylen;
 }
 
 char *getkey(char *word)

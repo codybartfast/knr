@@ -7,8 +7,8 @@
  */
 
 // check malloc getword/strdup,wordinfo
-// remove noise words
 // check 6-1, 6-2
+// strdup warning
 // free
 
 #include <ctype.h>
@@ -17,6 +17,16 @@
 #include "getword.h"
 
 #define MAXWORD 100
+
+char *noisewords[] = { "a",	"about", "all",	 "an",	  "and",  "as",
+		       "at",	"be",	 "but",	 "by",	  "do",	  "for",
+		       "from",	"get",	 "go",	 "have",  "he",	  "her",
+		       "his",	"i",	 "if",	 "in",	  "it",	  "me",
+		       "my",	"not",	 "of",	 "on",	  "one",  "or",
+		       "out",	"say",	 "she",	 "so",	  "that", "the",
+		       "their", "there", "they", "this",  "to",	  "up",
+		       "we",	"what",	 "when", "which", "who",  "will",
+		       "with",	"would", "you" };
 
 struct wnode {
 	char *key;
@@ -28,6 +38,7 @@ struct wnode *addword(struct wnode *, char *key, struct wordinfo *wi);
 struct wnode *walloc(void);
 void wprint(struct wnode *);
 char *keyfrom(char *key, char *word);
+int isnoiseword(char *word, int n);
 
 struct lnode {
 	int line;
@@ -39,14 +50,16 @@ void lprint(struct lnode *, int first);
 
 int main(void)
 {
+	char key[MAXWORD];
 	struct wordinfo *wi;
 	struct wnode *wnode = NULL;
-	char key[MAXWORD];
+	int nnoise = (sizeof noisewords / sizeof(char *));
 
-	psudoalpha = '-';
+	psudoalpha = '\'';
 
 	while ((wi = getwordinfo(&streamin, MAXWORD)) != NULL)
-		wnode = addword(wnode, keyfrom(key, wi->word), wi);
+		if (!isnoiseword(keyfrom(key, wi->word), nnoise))
+			wnode = addword(wnode, key, wi);
 	wprint(wnode);
 	return 0;
 }
@@ -83,7 +96,7 @@ void wprint(struct wnode *wnode)
 {
 	if (!(wnode == NULL)) {
 		wprint(wnode->left);
-		printf("%s ", wnode->key);
+		printf("%s  ", wnode->key);
 		lprint(wnode->lines, 1);
 		printf("\n");
 		wprint(wnode->right);
@@ -96,6 +109,25 @@ char *keyfrom(char *key, char *word)
 	while ((*k++ = tolower(*word++)))
 		;
 	return key;
+}
+
+int isnoiseword(char *word, int n)
+{
+	int cond;
+	int low, high, mid;
+
+	low = 0;
+	high = n - 1;
+	while (low <= high) {
+		mid = (low + high) / 2;
+		if ((cond = strcmp(word, noisewords[mid])) < 0)
+			high = mid - 1;
+		else if (cond > 0)
+			low = mid + 1;
+		else
+			return 1;
+	}
+	return 0;
 }
 
 struct lnode *addline(struct lnode *p, int line)

@@ -4,14 +4,27 @@
 #include <string.h>
 #include "getword.h"
 
+struct wordinfo *getwi(struct stream *stream, char *word, int lim);
+
+char psudoalpha = '_';
+
 int getword(struct stream *stream, char *word, int lim)
 {
-	if (getwordinfo(stream, word, lim) == NULL)
+	struct wordinfo *wi = getwordinfo(stream, lim);
+
+	if (wi == NULL)
 		return EOF;
+	strcpy(word, wi->word);
 	return *word;
 }
 
-struct wordinfo *getwordinfo(struct stream *stream, char *word, int lim)
+struct wordinfo *getwordinfo(struct stream *stream, int lim)
+{
+	char *word = (char *)malloc(lim * sizeof(char));
+	return getwi(stream, word, lim);
+}
+
+struct wordinfo *getwi(struct stream *stream, char *word, int lim)
 {
 	int c;
 	char *w = word;
@@ -23,7 +36,8 @@ struct wordinfo *getwordinfo(struct stream *stream, char *word, int lim)
 		return NULL;
 	*w++ = c;
 	if (asalpha(c)) {
-		wi = (struct wordinfo *)malloc(sizeof(struct wordinfo));		
+		wi = (struct wordinfo *)malloc(sizeof(struct wordinfo));
+		wi->word = word;
 		wi->line = stream->line + 1;
 		wi->pos = stream->pos;
 		for (; --lim > 0; w++) {
@@ -33,11 +47,9 @@ struct wordinfo *getwordinfo(struct stream *stream, char *word, int lim)
 			}
 		}
 		*w = '\0';
-		wi->word = strdup(word);
-
-		return wi;  
+		return wi;
 	}
-	return getwordinfo(stream, word, lim);
+	return getwordinfo(stream, lim);
 }
 
 /* is character we treat As alphabetic */
@@ -49,5 +61,5 @@ int asalpha(char c)
 /* is character we treat As alphabetic or is numeric */
 int asalnum(char c)
 {
-	return isalnum(c) || c == '_';
+	return isalnum(c) || c == psudoalpha;
 }

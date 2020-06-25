@@ -6,26 +6,123 @@
  * words like "the," "and," and so on.
  */
 
-// malloc getword/strdup,wordinfo
-// case insensitive
+// check malloc getword/strdup,wordinfo
 // remove noise words
 // check 6-1, 6-2
 // free
 
 #include <ctype.h>
 #include <stdio.h>
+#include <string.h>
 #include "getword.h"
 
 #define MAXWORD 100
 
-int *zepbra;
+struct wnode {
+	char *key;
+	struct lnode *lines;
+	struct wnode *left;
+	struct wnode *right;
+};
+struct wnode *addword(struct wnode *, char *key, struct wordinfo *wi);
+struct wnode *walloc(void);
+void wprint(struct wnode *);
+char *keyfrom(char *key, char *word);
+
+struct lnode {
+	int line;
+	struct lnode *next;
+};
+struct lnode *addline(struct lnode *, int line);
+struct lnode *lalloc(void);
+void lprint(struct lnode *, int first);
 
 int main(void)
 {
 	struct wordinfo *wi;
-	char word[MAXWORD];
+	struct wnode *wnode = NULL;
+	char key[MAXWORD];
 
-	while ((wi = getwordinfo(&streamin, word, MAXWORD)) != NULL)
-		printf("%d:%d %s\n", wi->line, wi->pos, wi->word);
+	psudoalpha = '-';
+
+	while ((wi = getwordinfo(&streamin, MAXWORD)) != NULL)
+		wnode = addword(wnode, keyfrom(key, wi->word), wi);
+	wprint(wnode);
 	return 0;
+}
+
+struct wnode *addword(struct wnode *p, char *key, struct wordinfo *wi)
+{
+	int cond;
+	if (p == NULL) {
+		if ((p = walloc()) == NULL)
+			return NULL;
+		p->key = strdup(keyfrom(key, wi->word));
+		p->left = p->right = NULL;
+		if ((p->lines = addline(NULL, wi->line)) == NULL)
+			return NULL;
+	} else if ((cond = strcmp(key, p->key)) == 0) {
+		if ((p->lines = addline(p->lines, wi->line)) == NULL)
+			return NULL;
+	} else if (cond < 0) {
+		if ((p->left = addword(p->left, key, wi)) == NULL)
+			return NULL;
+	} else {
+		if ((p->right = addword(p->right, key, wi)) == NULL)
+			return NULL;
+	}
+	return p;
+}
+
+struct wnode *walloc(void)
+{
+	return (struct wnode *)malloc(sizeof(struct wnode));
+}
+
+void wprint(struct wnode *wnode)
+{
+	if (!(wnode == NULL)) {
+		wprint(wnode->left);
+		printf("%s ", wnode->key);
+		lprint(wnode->lines, 1);
+		printf("\n");
+		wprint(wnode->right);
+	}
+}
+
+char *keyfrom(char *key, char *word)
+{
+	char *k = key;
+	while ((*k++ = tolower(*word++)))
+		;
+	return key;
+}
+
+struct lnode *addline(struct lnode *p, int line)
+{
+	if (p == NULL) {
+		if ((p = lalloc()) == NULL)
+			return NULL;
+		p->line = line;
+		p->next = NULL;
+	} else if (p->line == line) {
+		return p;
+	} else {
+		if ((p->next = addline(p->next, line)) == NULL)
+			return NULL;
+	}
+	return p;
+}
+
+struct lnode *lalloc(void)
+{
+	return (struct lnode *)malloc(sizeof(struct lnode));
+}
+
+void lprint(struct lnode *p, int first)
+{
+	if (p != NULL) {
+		first ? printf("%d", p->line) : printf(", %d", p->line);
+		lprint(p->next, 0);
+	}
 }

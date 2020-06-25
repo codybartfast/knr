@@ -6,12 +6,11 @@
  * words like "the," "and," and so on.
  */
 
-// check 6-1, 6-2
-// strdup warning
-// free
+
 
 #include <ctype.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include "getword.h"
 
@@ -46,6 +45,7 @@ struct lnode {
 struct lnode *addline(struct lnode *, int line);
 struct lnode *lalloc(void);
 void lprint(struct lnode *, int first);
+char *strdup(const char *s);
 
 int main(void)
 {
@@ -70,7 +70,7 @@ struct wnode *addword(struct wnode *p, char *key, struct wordinfo *wi)
 	if (p == NULL) {
 		if ((p = walloc()) == NULL)
 			return NULL;
-		p->key = strdup(keyfrom(key, wi->word));
+		p->key = (char *)strdup(keyfrom(key, wi->word));
 		p->left = p->right = NULL;
 		if ((p->lines = addline(NULL, wi->line)) == NULL)
 			return NULL;
@@ -157,4 +157,14 @@ void lprint(struct lnode *p, int first)
 		first ? printf("%d", p->line) : printf(", %d", p->line);
 		lprint(p->next, 0);
 	}
+}
+
+char *strdup(const char *s)
+{
+	char *p;
+
+	p = (char *)malloc(strlen(s) + 1);
+	if (p != NULL)
+		strcpy(p, s);
+	return p;
 }

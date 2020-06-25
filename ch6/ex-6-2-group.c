@@ -49,6 +49,7 @@ struct stream filteredstream;
 void parseargs(int argc, char *argv[]);
 int isreserved(char *word, char *reserved[], int n);
 char *getkey(char *word);
+char *strdup(const char *s);
 
 int nreserved;
 char key[MAXWORD];
@@ -83,7 +84,7 @@ void parseargs(int argc, char *argv[])
 
 	if (!(argc == 2))
 		return;
-	if (len = atoi(*++argv))
+	if ((len = atoi(*++argv)))
 		keylen = len;
 }
 

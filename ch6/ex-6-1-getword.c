@@ -34,7 +34,7 @@ int nkeys;
 int filtered(void);
 struct filterstate filterstate;
 int filterbuff[MAXCHBUF];
-struct stream filteredstream = { filtered, filterbuff, 0 };
+struct stream filteredstream;
 
 int binsearch(char *, struct key *, int);
 
@@ -43,6 +43,7 @@ int main(void)
 	int n;
 	char word[MAXWORD];
 	nkeys = (sizeof keytab / sizeof(struct key));
+	filteredstream = *newstream(&filtered);
 
 	while (getword(&filteredstream, word, MAXWORD) != EOF)
 		if (isalpha(word[0]))

@@ -21,6 +21,8 @@ int getword(struct stream *stream, char *word, int lim)
 struct wordinfo *getwordinfo(struct stream *stream, int lim)
 {
 	char *word = (char *)malloc(lim * sizeof(char));
+	if(word == NULL)
+		return NULL;
 	return getwi(stream, word, lim);
 }
 
@@ -37,6 +39,8 @@ struct wordinfo *getwi(struct stream *stream, char *word, int lim)
 	*w++ = c;
 	if (asalpha(c)) {
 		wi = (struct wordinfo *)malloc(sizeof(struct wordinfo));
+		if(wi == NULL)
+			return NULL;
 		wi->word = word;
 		wi->line = stream->line + 1;
 		wi->pos = stream->pos;

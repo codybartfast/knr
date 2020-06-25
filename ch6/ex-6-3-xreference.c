@@ -6,7 +6,6 @@
  * words like "the," "and," and so on.
  */
 
-// check malloc getword/strdup,wordinfo
 // check 6-1, 6-2
 // strdup warning
 // free
@@ -59,7 +58,8 @@ int main(void)
 
 	while ((wi = getwordinfo(&streamin, MAXWORD)) != NULL)
 		if (!isnoiseword(keyfrom(key, wi->word), nnoise))
-			wnode = addword(wnode, key, wi);
+			if ((wnode = addword(wnode, key, wi)) == NULL)
+				return 1;
 	wprint(wnode);
 	return 0;
 }

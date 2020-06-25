@@ -30,7 +30,7 @@ int getch(struct stream *stream)
 	if (c == '\n') {
 		stream->line++;
 		stream->pos = 0;
-	} else if(c == '\t'){
+	} else if (c == '\t') {
 		stream->pos = stream->pos + 8;
 	} else {
 		stream->pos++;

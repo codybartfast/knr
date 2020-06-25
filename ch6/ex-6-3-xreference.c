@@ -6,7 +6,7 @@
  * words like "the," "and," and so on.
  */
 
-#include <ctype.h>
+#include <ctype.h> 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -166,8 +166,9 @@ struct lnode *lalloc(void)
 	return (struct lnode *)malloc(sizeof(struct lnode));
 }
 
-void freelnode(struct lnode *lnode){
-	if(lnode == NULL)
+void freelnode(struct lnode *lnode)
+{
+	if (lnode == NULL)
 		return;
 	freelnode(lnode->next);
 	free(lnode);

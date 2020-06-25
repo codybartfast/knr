@@ -15,13 +15,14 @@ int getword(struct stream *stream, char *word, int lim)
 	if (wi == NULL)
 		return EOF;
 	strcpy(word, wi->word);
+	free(wi);
 	return *word;
 }
 
 struct wordinfo *getwordinfo(struct stream *stream, int lim)
 {
 	char *word = (char *)malloc(lim * sizeof(char));
-	if(word == NULL)
+	if (word == NULL)
 		return NULL;
 	return getwi(stream, word, lim);
 }
@@ -34,13 +35,17 @@ struct wordinfo *getwi(struct stream *stream, char *word, int lim)
 
 	while (isspace(c = getch(stream)))
 		;
-	if (c == EOF)
+	if (c == EOF) {
+		free(word);
 		return NULL;
+	}
 	*w++ = c;
 	if (asalpha(c)) {
 		wi = (struct wordinfo *)malloc(sizeof(struct wordinfo));
-		if(wi == NULL)
+		if (wi == NULL) {
+			free(word);
 			return NULL;
+		}
 		wi->word = word;
 		wi->line = stream->line + 1;
 		wi->pos = stream->pos;
@@ -66,4 +71,12 @@ int asalpha(char c)
 int asalnum(char c)
 {
 	return isalnum(c) || c == psudoalpha;
+}
+
+void freewordinfo(struct wordinfo *wi)
+{
+	if (wi == NULL)
+		return;
+	free(wi->word);
+	free(wi);
 }

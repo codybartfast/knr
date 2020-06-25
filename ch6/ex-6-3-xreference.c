@@ -6,8 +6,6 @@
  * words like "the," "and," and so on.
  */
 
-
-
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,9 +29,11 @@ struct wnode {
 	struct lnode *lines;
 	struct wnode *left;
 	struct wnode *right;
+	struct wordinfo *wi;
 };
 struct wnode *addword(struct wnode *, char *key, struct wordinfo *wi);
 struct wnode *walloc(void);
+void freewnode(struct wnode *wnode);
 void wprint(struct wnode *);
 char *keyfrom(char *key, char *word);
 int isnoiseword(char *word, int n);
@@ -44,6 +44,7 @@ struct lnode {
 };
 struct lnode *addline(struct lnode *, int line);
 struct lnode *lalloc(void);
+void freelnode(struct lnode *lnode);
 void lprint(struct lnode *, int first);
 char *strdup(const char *s);
 
@@ -61,6 +62,7 @@ int main(void)
 			if ((wnode = addword(wnode, key, wi)) == NULL)
 				return 1;
 	wprint(wnode);
+	freewnode(wnode);
 	return 0;
 }
 
@@ -70,6 +72,7 @@ struct wnode *addword(struct wnode *p, char *key, struct wordinfo *wi)
 	if (p == NULL) {
 		if ((p = walloc()) == NULL)
 			return NULL;
+		p->wi = wi;
 		p->key = (char *)strdup(keyfrom(key, wi->word));
 		p->left = p->right = NULL;
 		if ((p->lines = addline(NULL, wi->line)) == NULL)
@@ -90,6 +93,18 @@ struct wnode *addword(struct wnode *p, char *key, struct wordinfo *wi)
 struct wnode *walloc(void)
 {
 	return (struct wnode *)malloc(sizeof(struct wnode));
+}
+
+void freewnode(struct wnode *wnode)
+{
+	if (wnode == NULL)
+		return;
+	freewnode(wnode->left);
+	freewnode(wnode->right);
+	freewordinfo(wnode->wi);
+	free(wnode->key);
+	freelnode(wnode->lines);
+	free(wnode);
 }
 
 void wprint(struct wnode *wnode)
@@ -149,6 +164,13 @@ struct lnode *addline(struct lnode *p, int line)
 struct lnode *lalloc(void)
 {
 	return (struct lnode *)malloc(sizeof(struct lnode));
+}
+
+void freelnode(struct lnode *lnode){
+	if(lnode == NULL)
+		return;
+	freelnode(lnode->next);
+	free(lnode);
 }
 
 void lprint(struct lnode *p, int first)

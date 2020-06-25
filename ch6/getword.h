@@ -2,6 +2,7 @@
 
 int getword(struct stream *, char *, int);
 struct wordinfo *getwordinfo(struct stream *, int);
+void freewordinfo(struct wordinfo *wi);
 int asalpha(char c);
 int asalnum(char c);
 

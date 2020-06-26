@@ -14,96 +14,81 @@
 #define MAXWORD 100
 
 struct wnode {
-	struct wordinfo *wi;
 	char *key;
 	int count;
 	struct wnode *left;
 	struct wnode *right;
 };
-struct wnode *addword(struct wnode *p, char *key, struct wordinfo *wi, int *wc);
+struct wnode *addword(struct wnode *p, char *key, int *wc);
+int treetoarray(struct wnode **warray, struct wnode *wnode, int i);
 int compare(struct wnode *a, struct wnode *b);
-void wprint(struct wnode *);
 struct wnode *walloc(void);
 void freewnode(struct wnode *wnode);
-int nodetoarray(struct wnode **warray, struct wnode *wnode, int i);
 char *keyfrom(char *key, char *word);
+int isnoiseword(char *word);
 char *strdup(const char *s);
-int isnoiseword(char *word, int n);
-
-char *noisewords[] = { "a",	"about", "all",	 "an",	  "and",  "as",
-		       "at",	"be",	 "but",	 "by",	  "do",	  "for",
-		       "from",	"get",	 "go",	 "have",  "he",	  "her",
-		       "his",	"i",	 "if",	 "in",	  "it",	  "me",
-		       "my",	"not",	 "of",	 "on",	  "one",  "or",
-		       "out",	"say",	 "she",	 "so",	  "that", "the",
-		       "their", "there", "they", "this",  "to",	  "up",
-		       "we",	"what",	 "when", "which", "who",  "will",
-		       "with",	"would", "you" };
+int memerrcode(char *detail);
 
 int main(void)
 {
-	int i;
-
-	struct wordinfo *wi;
-	char key[MAXWORD];
-	int nnoise = (sizeof noisewords / sizeof(char *));
-	int wc = 0;
-	struct wnode *wnode = NULL;
-	struct wnode **warray;
+	char word[MAXWORD], key[MAXWORD];
+	int i, wordcount = 0;
+	struct wnode **warray, *wnode = NULL;
 
 	psudoalpha = '\'';
 
-	while ((wi = getwordinfo(&streamin, MAXWORD)) != NULL)
-		if (!isnoiseword(keyfrom(key, wi->word), nnoise))
-			if ((wnode = addword(wnode, key, wi, &wc)) == NULL)
-				return 1;
+	while (getword(&streamin, word, MAXWORD) != EOF)
+		if (!isnoiseword(keyfrom(key, word)))
+			if ((wnode = addword(wnode, key, &wordcount)) == NULL)
+				return memerrcode("addword");
 
-	warray = (struct wnode **)malloc(wc * sizeof(struct wnode *));
-	nodetoarray(warray, wnode, 0);
-	quicksort((void **)warray, 0, wc - 1, (VOIDCOMP)compare);
-	for (i = 0; i < wc; i++)
-		printf("%4d  %s\n", warray[i]->count, warray[i]->key);	
-		
+	warray = (struct wnode **)malloc(wordcount * sizeof(struct wnode *));
+	if (warray == NULL)
+		return memerrcode("warray");
+	treetoarray(warray, wnode, 0);
+	quicksort((void **)warray, 0, wordcount - 1, (VOIDCOMP)compare);
+	for (i = 0; i < wordcount; i++)
+		printf("%4d  %s\n", warray[i]->count, warray[i]->key);
+
 	freewnode(wnode);
 	free(warray);
 	return 0;
 }
 
-struct wnode *addword(struct wnode *p, char *key, struct wordinfo *wi, int *wc)
+struct wnode *addword(struct wnode *p, char *key, int *wc)
 {
 	int cond;
 	if (p == NULL) {
 		if ((p = walloc()) == NULL)
-			return NULL;
-		p->wi = wi;
-		p->key = (char *)strdup(keyfrom(key, wi->word));
+			NULL;
+		p->key = (char *)strdup(key);
 		p->left = p->right = NULL;
 		p->count = 1;
 		(*wc)++;
 	} else if ((cond = strcmp(key, p->key)) == 0) {
 		p->count++;
 	} else if (cond < 0) {
-		if ((p->left = addword(p->left, key, wi, wc)) == NULL)
+		if ((p->left = addword(p->left, key, wc)) == NULL)
 			return NULL;
 	} else {
-		if ((p->right = addword(p->right, key, wi, wc)) == NULL)
+		if ((p->right = addword(p->right, key, wc)) == NULL)
 			return NULL;
 	}
 	return p;
 }
 
+int treetoarray(struct wnode **warray, struct wnode *wnode, int idx)
+{
+	if (!wnode)
+		return idx;
+	warray[idx++] = wnode;
+	idx = treetoarray(warray, wnode->left, idx);
+	return treetoarray(warray, wnode->right, idx);
+}
+
 int compare(struct wnode *a, struct wnode *b)
 {
 	return b->count - a->count;
-}
-
-void wprint(struct wnode *wnode)
-{
-	if (!(wnode == NULL)) {
-		wprint(wnode->left);
-		printf("%4d  %s\n", wnode->count, wnode->key);
-		wprint(wnode->right);
-	}
 }
 
 struct wnode *walloc(void)
@@ -117,19 +102,8 @@ void freewnode(struct wnode *wnode)
 		return;
 	freewnode(wnode->left);
 	freewnode(wnode->right);
-	freewordinfo(wnode->wi);
 	free(wnode->key);
 	free(wnode);
-}
-
-int nodetoarray(struct wnode **warray, struct wnode *wnode, int i)
-{
-	warray[i++] = wnode;
-	if (wnode->left)
-		i = nodetoarray(warray, wnode->left, i);
-	if (wnode->right)
-		i = nodetoarray(warray, wnode->right, i);
-	return i;
 }
 
 char *keyfrom(char *key, char *word)
@@ -140,10 +114,21 @@ char *keyfrom(char *key, char *word)
 	return key;
 }
 
-int isnoiseword(char *word, int n)
+int isnoiseword(char *word)
 {
-	int cond;
-	int low, high, mid;
+	static char *noisewords[] = {
+		"a",	 "about", "all",   "an",    "and",  "as",   "at",
+		"be",	 "but",	  "by",	   "do",    "for",  "from", "get",
+		"go",	 "have",  "he",	   "her",   "his",  "i",    "if",
+		"in",	 "it",	  "me",	   "my",    "not",  "of",   "on",
+		"one",	 "or",	  "out",   "say",   "she",  "so",   "that",
+		"the",	 "their", "there", "they",  "this", "to",   "up",
+		"we",	 "what",  "when",  "which", "who",  "will", "with",
+		"would", "you"
+	};
+	static int n = (sizeof noisewords / sizeof(char *));
+
+	int cond, low, high, mid;
 
 	low = 0;
 	high = n - 1;
@@ -161,10 +146,14 @@ int isnoiseword(char *word, int n)
 
 char *strdup(const char *s)
 {
-	char *p;
-
-	p = (char *)malloc(strlen(s) + 1);
+	char *p = (char *)malloc(strlen(s) + 1);
 	if (p != NULL)
 		strcpy(p, s);
 	return p;
+}
+
+int memerrcode(char *detail)
+{
+	printf("error: out of memory. (%s)\n", detail);
+	return 1;
 }

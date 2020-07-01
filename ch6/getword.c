@@ -6,7 +6,8 @@
 
 struct wordinfo *getwi(struct stream *stream, char *word, int lim);
 
-char psudoalpha = '_';
+char *pseudoalphas = "_";
+int ispseudoalpha(char c);
 
 int getword(struct stream *stream, char *word, int lim)
 {
@@ -64,13 +65,22 @@ struct wordinfo *getwi(struct stream *stream, char *word, int lim)
 /* is character we treat As alphabetic */
 int asalpha(char c)
 {
-	return isalpha(c) || c == '_';
+	return isalpha(c) || ispseudoalpha(c);
 }
 
 /* is character we treat As alphabetic or is numeric */
 int asalnum(char c)
 {
-	return isalnum(c) || c == psudoalpha;
+	return isalnum(c) || asalpha(c);
+}
+
+int ispseudoalpha(char c)
+{
+	char *pa;
+	for (pa = pseudoalphas; *pa != '\0'; pa++)
+		if (*pa == c)
+			return 1;
+	return 0;
 }
 
 void freewordinfo(struct wordinfo *wi)

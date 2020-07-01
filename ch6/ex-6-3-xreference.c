@@ -6,7 +6,7 @@
  * words like "the," "and," and so on.
  */
 
-#include <ctype.h> 
+#include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -55,7 +55,7 @@ int main(void)
 	struct wnode *wnode = NULL;
 	int nnoise = (sizeof noisewords / sizeof(char *));
 
-	psudoalpha = '\'';
+	pseudoalphas = "'-";
 
 	while ((wi = getwordinfo(&streamin, MAXWORD)) != NULL)
 		if (!isnoiseword(keyfrom(key, wi->word), nnoise))

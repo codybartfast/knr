@@ -6,7 +6,7 @@ void freewordinfo(struct wordinfo *wi);
 int asalpha(char c);
 int asalnum(char c);
 
-char psudoalpha;
+char *pseudoalphas;
 
 struct wordinfo {
 	char *word;

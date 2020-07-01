@@ -35,7 +35,7 @@ int main(void)
 	int i, wordcount = 0;
 	struct wnode **warray, *wnode = NULL;
 
-	psudoalpha = '\'';
+	pseudoalphas = "'-";
 
 	while (getword(&streamin, word, MAXWORD) != EOF)
 		if (!isnoiseword(keyfrom(key, word)))

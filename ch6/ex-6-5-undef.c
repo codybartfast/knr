@@ -13,31 +13,88 @@
 #define COLOUR "colour"
 #define ANIMAL "animal"
 
-struct nlist *lookup(char *s);
-struct nlist *install(char *name, char *defn);
-unsigned hash(char *s);
-char *strdup(char *);
-
-static struct nlist *hashtab[HASHSIZE];
-
 struct nlist {
 	struct nlist *next;
 	char *name;
 	char *defn;
 };
 
+void undef(char *name);
+struct nlist *delist(char *name, struct nlist *np);
+char *defn(struct nlist *np);
+void settab(void);
+void display(void);
+struct nlist *lookup(char *s);
+struct nlist *install(char *name, char *defn);
+unsigned hash(char *s);
+char *strdup(const char *);
+
+static struct nlist *hashtab[HASHSIZE];
+
 int main(void)
 {
-	install(SPEED, "quick");
-	install(COLOUR, "brown");
-	install(ANIMAL, "cow");
-	install(ANIMAL, "fox");
+	settab();
+	display();
 
-	printf("The %s, %s %s jumped over the lazy dog.%s\n",
-	       lookup(SPEED)->defn, lookup(COLOUR)->defn, lookup(ANIMAL)->defn,
-	       (char *)NULL);
+	settab();
+	undef(SPEED);
+	display();
+
+	settab();
+	undef(COLOUR);
+	display();
+
+	settab();
+	undef(ANIMAL);
+	display();
 
 	return 0;
+}
+
+void undef(char *name)
+{
+	if (name == NULL) {
+		return;
+	} else {
+		unsigned hashval = hash(name);
+		hashtab[hashval] = delist(name, hashtab[hashval]);
+	}
+}
+
+struct nlist *delist(char *name, struct nlist *np)
+{
+	if (np == NULL)
+		return NULL;
+	if (strcmp(name, np->name) == 0) {
+		struct nlist *next = np->next;
+		free(np->name);
+		free(np->defn);
+		free(np);
+		return next;
+	}
+	np->next = delist(name, np->next);
+	return np;
+}
+
+char *defn(struct nlist *np)
+{
+	return np ? np->defn : "????";
+}
+
+void settab(void)
+{
+	int i;
+	for (i = 0; i < HASHSIZE; i++)
+		hashtab[i] = NULL;
+	install(SPEED, "quick");
+	install(COLOUR, "brown");
+	install(ANIMAL, "fox");
+}
+
+void display(void)
+{
+	printf("The %s, %s %s jumped over the lazy dog.\n", defn(lookup(SPEED)),
+	       defn(lookup(COLOUR)), defn(lookup(ANIMAL)));
 }
 
 struct nlist *lookup(char *s)
@@ -72,14 +129,14 @@ struct nlist *install(char *name, char *defn)
 unsigned hash(char *s)
 {
 	return 0;
-	unsigned hashval;
+	/* unsigned hashval;
 
 	for (hashval = 0; *s != '\0'; s++)
 		hashval = *s + 31 * hashval;
-	return hashval % HASHSIZE;
+	return hashval % HASHSIZE; */
 }
 
-char *strdup(char *s)
+char *strdup(const char *s)
 {
 	char *p = (char *)malloc(strlen(s) + 1);
 	if (p != NULL)

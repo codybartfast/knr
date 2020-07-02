@@ -1,7 +1,10 @@
 #include "stream.h"
 
-int getword(struct stream *, char *, int);
-struct wordinfo *getwordinfo(struct stream *, int);
+enum {NO_FILTER = 0, FILTER_CODE = 1};
+
+int getword(int filtered, char *, int);
+struct wordinfo *getwordinfo(int filtered, int);
+struct wordinfo *gettoken(int filter, int lim);
 void freewordinfo(struct wordinfo *wi);
 int asalpha(char c);
 int asalnum(char c);

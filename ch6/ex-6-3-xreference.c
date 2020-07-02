@@ -57,7 +57,7 @@ int main(void)
 
 	pseudoalphas = "'-";
 
-	while ((wi = getwordinfo(&streamin, MAXWORD)) != NULL)
+	while ((wi = getwordinfo(NO_FILTER, MAXWORD)) != NULL)
 		if (!isnoiseword(keyfrom(key, wi->word), nnoise))
 			if ((wnode = addword(wnode, key, wi)) == NULL)
 				return 1;

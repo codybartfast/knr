@@ -3,10 +3,14 @@
 
 enum filtermode { CODE = 0, PREPROC, COMMENT, DOUBLE, SINGLE };
 
-struct filterstate newfilterstate(void)
+struct filterstate filterstate = { CODE, 0 };
+static int fltbuff[MAXCHBUF];
+int filtered(void);
+struct stream filteredin = { &filtered, fltbuff, 0, 0, 0, 0 };
+
+int filtered(void)
 {
-	struct filterstate s = { CODE };
-	return s;
+	return filter_code(&streamin, filterstate);
 }
 
 int filter_code(struct stream *stream, struct filterstate state)
@@ -43,7 +47,8 @@ int filter_code(struct stream *stream, struct filterstate state)
 			state.mode = CODE;
 			return filter_code(stream, state);
 		default:
-			return filter_code(stream, state);
+			return state.incpreproc ? c :
+						  filter_code(stream, state);
 		}
 	case COMMENT:
 		switch (c) {

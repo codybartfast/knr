@@ -10,7 +10,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "filter-code.h"
 #include "getword.h"
 
 #define MAXWORD 100
@@ -42,10 +41,6 @@ struct wnode *addword(struct wnode *, char *w);
 struct wnode *walloc(void);
 void wprint(struct wnode *);
 
-int filtered(void);
-struct filterstate filterstate;
-struct stream filteredstream;
-
 void parseargs(int argc, char *argv[]);
 int isreserved(char *word, char *reserved[], int n);
 char *getkey(char *word);
@@ -62,10 +57,9 @@ int main(int argc, char *argv[])
 
 	nreserved = (sizeof reserved / sizeof(char *));
 
-	filteredstream = *newstream(&filtered);
 	parseargs(argc, argv);
 	ktree = NULL;
-	while (getword(&filteredstream, word, MAXWORD) != EOF)
+	while (getword(FILTER_CODE, word, MAXWORD) != EOF)
 		if (asalpha(word[0]) &&
 		    !(isreserved(word, reserved, nreserved))) {
 			ktree = addkey(ktree, getkey(word), word);
@@ -86,11 +80,6 @@ void parseargs(int argc, char *argv[])
 		return;
 	if ((len = atoi(*++argv)))
 		keylen = len;
-}
-
-int filtered(void)
-{
-	return filter_code(&streamin, filterstate);
 }
 
 int isreserved(char *word, char *reserved[], int n)

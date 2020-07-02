@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "filter-code.h"
 #include "getword.h"
 
 struct wordinfo *getwi(struct stream *stream, char *word, int lim);
@@ -9,9 +10,9 @@ struct wordinfo *getwi(struct stream *stream, char *word, int lim);
 char *pseudoalphas = "_";
 int ispseudoalpha(char c);
 
-int getword(struct stream *stream, char *word, int lim)
+int getword(int filter, char *word, int lim)
 {
-	struct wordinfo *wi = getwordinfo(stream, lim);
+	struct wordinfo *wi = getwordinfo(filter, lim);
 
 	if (wi == NULL)
 		return EOF;
@@ -20,8 +21,9 @@ int getword(struct stream *stream, char *word, int lim)
 	return *word;
 }
 
-struct wordinfo *getwordinfo(struct stream *stream, int lim)
+struct wordinfo *getwordinfo(int filter, int lim)
 {
+	struct stream *stream = filter ? &filteredin : &streamin;
 	char *word = (char *)malloc(lim * sizeof(char));
 	if (word == NULL)
 		return NULL;
@@ -59,7 +61,42 @@ struct wordinfo *getwi(struct stream *stream, char *word, int lim)
 		*w = '\0';
 		return wi;
 	}
-	return getwordinfo(stream, lim);
+	return getwi(stream, word, lim);
+}
+
+struct wordinfo *gettoken(int filter, int lim)
+{
+	struct stream *stream = filter ? &filteredin : &streamin;
+	int c;
+	struct wordinfo *wi;
+	char *w, *word;
+
+	while (isspace(c = getch(stream)))
+		;
+	if (c == EOF)
+		return NULL;
+
+	w = word = (char *)malloc(lim * sizeof(char));
+	if (word == NULL)
+		return NULL;
+	wi = (struct wordinfo *)malloc(sizeof(struct wordinfo));
+	if (wi == NULL) {
+		free(word);
+		return NULL;
+	}
+	*w++ = c;
+
+	if (asalpha(c)) {
+		while (asalnum(c = getch(stream)))
+			*w++ = c;
+		ungetch(stream, c);
+	}
+
+	*w = '\0';
+	wi->word = word;
+	wi->line = stream->line + 1;
+	wi->pos = stream->pos;
+	return wi;
 }
 
 /* is character we treat As alphabetic */

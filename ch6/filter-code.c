@@ -1,93 +1,162 @@
 #include <stdio.h>
+#include <time.h>
 #include "filter-code.h"
 
-enum filtermode { CODE = 0, PREPROC, COMMENT, DOUBLE, SINGLE };
+struct filterstate {
+	int mode;
+};
 
-struct filterstate filterstate = { CODE, 0 };
+struct filterstate filterstate = { CODE };
 static int fltbuff[MAXCHBUF];
 int filtered(void);
+int filter_code(struct stream *stream, struct filterstate *state);
+struct charinfo *parse_code(struct stream *stream, struct filterstate *state);
+struct charinfo *newci(int ch, int mode);
 struct stream filteredin = { &filtered, fltbuff, 0, 0, 0, 0 };
 
 int filtered(void)
 {
-	return filter_code(&streamin, filterstate);
+	return filter_code(&streamin, &filterstate);
 }
 
-int filter_code(struct stream *stream, struct filterstate state)
+/* For backward compatibility with 6-1 & 6-2 */
+int filter_code(struct stream *stream, struct filterstate *state)
 {
-	int c = getch(stream);
+	int c;
+	struct charinfo *ci = parse_code(stream, state);
+	if (ci == NULL)
+		return EOF;
+	if (ci->mode == CODE) {
+		c = ci->ch;
+		freeci(ci);
+		return c;
+	} else {
+		freeci(ci);
+		return filter_code(stream, state);
+	}
+}
 
-	switch (state.mode) {
+struct charinfo *getparsed(void)
+{
+	return parse_code(&streamin, &filterstate);
+}
+
+struct charinfo *parse_code(struct stream *stream, struct filterstate *state)
+{
+	int c;
+	static struct charinfo *temp, *stored = NULL;
+
+	/* delay(1); */
+
+	if (stored != NULL) {
+		temp = stored;
+		stored = NULL;
+		return temp;
+	}
+
+	if ((c = getch(stream)) == EOF)
+		return NULL;
+	switch (state->mode) {
 	case CODE:
 		switch (c) {
 		case '#':
-			state.mode = PREPROC;
-			return filter_code(stream, state);
+			state->mode = PREPROC;
+			return newci(c, state->mode);
 		case '/':
-			if ((c = getch(stream)) == '*') {
-				state.mode = COMMENT;
-				return filter_code(stream, state);
+			if ((c = getch(stream)) == EOF) {
+				return NULL;
+			} else if (c == '*') {
+				state->mode = COMMENT;
+				stored = newci(c, CODE);
 			} else {
 				ungetch(stream, c);
-				return '/';
 			}
+			return newci('/', CODE);
 		case '"':
-			state.mode = DOUBLE;
-			return filter_code(stream, state);
+			state->mode = DOUBLE;
+			return newci(c, state->mode);
 		case '\'':
-			state.mode = SINGLE;
-			return filter_code(stream, state);
+			state->mode = SINGLE;
+			return newci(c, state->mode);
 		default:
-			return c;
+			return newci(c, CODE);
 		}
 	case PREPROC:
 		/* Assumes preproc statements are single line */
 		switch (c) {
 		case '\n':
-			state.mode = CODE;
-			return filter_code(stream, state);
+			state->mode = CODE;
+			return newci(c, state->mode);
 		default:
-			return state.incpreproc ? c :
-						  filter_code(stream, state);
+			return newci(c, state->mode);
 		}
 	case COMMENT:
 		switch (c) {
 		case '*':
-			if ((c = getch(stream)) == '/') {
-				state.mode = CODE;
-				return filter_code(stream, state);
+			if ((c = getch(stream)) == EOF) {
+				return NULL;
+			} else if (c == '/') {
+				state->mode = CODE;
+				stored = newci(c, CODE);
+				return newci('*', CODE);
 			} else {
 				ungetch(stream, c);
-				return filter_code(stream, state);
+				return newci('*', COMMENT);
 			}
 		default:
-			return filter_code(stream, state);
+			return newci(c, state->mode);
 		}
 
 	case DOUBLE:
 		switch (c) {
 		case '\\':
-			if (getch(stream) == EOF)
-				return EOF;
-			else { /* ignore escaped char */
+			if ((c = getch(stream)) == EOF)
+				return NULL;
+			else {
+				return newci(c, state->mode);
 			}
-			return filter_code(stream, state);
+			return newci(c, state->mode);
 		case '"':
-			state.mode = CODE;
-			return filter_code(stream, state);
+			state->mode = CODE;
+			return newci(c, state->mode);
 		default:
-			return filter_code(stream, state);
+			return newci(c, state->mode);
 		}
 	case SINGLE:
 		switch (c) {
 		case '\'':
-			state.mode = CODE;
-			return filter_code(stream, state);
+			state->mode = CODE;
+			return newci(c, state->mode);
 		default:
-			return filter_code(stream, state);
+			return newci(c, state->mode);
 		}
 	default:
-		printf("error: Unexpected mode %d", state.mode);
-		return EOF;
+		printf("error: Unexpected mode %d", state->mode);
+		return NULL;
 	}
 }
+
+struct charinfo *newci(int ch, int mode)
+{
+	struct charinfo *ci =
+		(struct charinfo *)malloc(sizeof(struct charinfo));
+	if (ci == NULL) {
+		printf("error: Out of memory (newci)\n");
+		return NULL;
+	}
+	ci->ch = ch;
+	ci->mode = mode;
+	return ci;
+}
+
+void freeci(struct charinfo *ci)
+{
+	free(ci);
+}
+
+/* void delay(int number_of_seconds)
+{
+	clock_t end = clock() + (1000 * number_of_seconds);
+	while (clock() < end)
+		;
+} */

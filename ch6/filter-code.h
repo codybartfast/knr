@@ -1,11 +1,12 @@
 #include "stream.h"
 
-struct filterstate {
-	int mode;
-	int incpreproc;
+enum filtermode { CODE = 0, PREPROC, COMMENT, DOUBLE, SINGLE };
+
+struct charinfo {
+	int ch;
+	enum filtermode mode;
 };
 
-struct filterstate filterstate;
-struct filterstate newfilterstate(void);
-int filter_code(struct stream *stream, struct filterstate state);
+struct charinfo *getparsed(void);
+void freeci(struct charinfo *ci);
 struct stream filteredin;

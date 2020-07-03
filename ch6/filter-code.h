@@ -5,6 +5,7 @@ enum filtermode { CODE = 0, PREPROC, COMMENT, DOUBLE, SINGLE };
 struct charinfo {
 	int ch;
 	enum filtermode mode;
+	long line;
 };
 
 struct charinfo *getparsed(void);

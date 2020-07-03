@@ -11,7 +11,7 @@ static int fltbuff[MAXCHBUF];
 int filtered(void);
 int filter_code(struct stream *stream, struct filterstate *state);
 struct charinfo *parse_code(struct stream *stream, struct filterstate *state);
-struct charinfo *newci(int ch, int mode);
+struct charinfo *newci(int ch, int mode, long line);
 struct stream filteredin = { &filtered, fltbuff, 0, 0, 0, 0 };
 
 int filtered(void)
@@ -44,6 +44,7 @@ struct charinfo *getparsed(void)
 struct charinfo *parse_code(struct stream *stream, struct filterstate *state)
 {
 	int c;
+	long line; /* needed? */
 	static struct charinfo *temp, *stored = NULL;
 
 	/* delay(1); */
@@ -54,41 +55,42 @@ struct charinfo *parse_code(struct stream *stream, struct filterstate *state)
 		return temp;
 	}
 
+	line = stream->line;
 	if ((c = getch(stream)) == EOF)
-		return NULL;
+		return newci(EOF, CODE, line);
 	switch (state->mode) {
 	case CODE:
 		switch (c) {
 		case '#':
 			state->mode = PREPROC;
-			return newci(c, state->mode);
+			return newci(c, state->mode, line);
 		case '/':
 			if ((c = getch(stream)) == EOF) {
 				return NULL;
 			} else if (c == '*') {
 				state->mode = COMMENT;
-				stored = newci(c, CODE);
+				stored = newci(c, CODE, stream->line);
 			} else {
 				ungetch(stream, c);
 			}
-			return newci('/', CODE);
+			return newci('/', CODE, line);
 		case '"':
 			state->mode = DOUBLE;
-			return newci(c, state->mode);
+			return newci(c, CODE, line);
 		case '\'':
 			state->mode = SINGLE;
-			return newci(c, state->mode);
+			return newci(c, CODE, line);
 		default:
-			return newci(c, CODE);
+			return newci(c, CODE, line);
 		}
 	case PREPROC:
 		/* Assumes preproc statements are single line */
 		switch (c) {
 		case '\n':
 			state->mode = CODE;
-			return newci(c, state->mode);
+			return newci(c, state->mode, line);
 		default:
-			return newci(c, state->mode);
+			return newci(c, state->mode, line);
 		}
 	case COMMENT:
 		switch (c) {
@@ -97,14 +99,14 @@ struct charinfo *parse_code(struct stream *stream, struct filterstate *state)
 				return NULL;
 			} else if (c == '/') {
 				state->mode = CODE;
-				stored = newci(c, CODE);
-				return newci('*', CODE);
+				stored = newci(c, CODE, stream->line);
+				return newci('*', CODE, line);
 			} else {
 				ungetch(stream, c);
-				return newci('*', COMMENT);
+				return newci('*', COMMENT, line);
 			}
 		default:
-			return newci(c, state->mode);
+			return newci(c, state->mode, line);
 		}
 
 	case DOUBLE:
@@ -113,22 +115,22 @@ struct charinfo *parse_code(struct stream *stream, struct filterstate *state)
 			if ((c = getch(stream)) == EOF)
 				return NULL;
 			else {
-				return newci(c, state->mode);
+				stored = newci(c, state->mode, stream->line);
 			}
-			return newci(c, state->mode);
+			return newci('\\', state->mode, line);
 		case '"':
 			state->mode = CODE;
-			return newci(c, state->mode);
+			return newci(c, state->mode, line);
 		default:
-			return newci(c, state->mode);
+			return newci(c, state->mode, line);
 		}
 	case SINGLE:
 		switch (c) {
 		case '\'':
 			state->mode = CODE;
-			return newci(c, state->mode);
+			return newci(c, state->mode, line);
 		default:
-			return newci(c, state->mode);
+			return newci(c, state->mode, line);
 		}
 	default:
 		printf("error: Unexpected mode %d", state->mode);
@@ -136,7 +138,7 @@ struct charinfo *parse_code(struct stream *stream, struct filterstate *state)
 	}
 }
 
-struct charinfo *newci(int ch, int mode)
+struct charinfo *newci(int ch, int mode, long line)
 {
 	struct charinfo *ci =
 		(struct charinfo *)malloc(sizeof(struct charinfo));
@@ -146,6 +148,7 @@ struct charinfo *newci(int ch, int mode)
 	}
 	ci->ch = ch;
 	ci->mode = mode;
+	ci->line = line;
 	return ci;
 }
 

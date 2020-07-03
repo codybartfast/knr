@@ -13,32 +13,27 @@
 #include "table.h"
 
 #define MAXWORD 1000
-#define CHERRY 1000
-#define D d
+#define LETTER char
+#define DISPLAY printf
+#define ENDWITH return
 
 static struct charinfo *stored;
 char *gettoken(void);
 char *code(char c);
+char *replacetkn(char *t);
 char *preproc(char c);
 int asalpha(char c);
 int asalnum(char c);
 
 char token[MAXWORD];
-char name[MAXWORD];
-char value[MAXWORD];
 enum filtermode mode;
-
-char *blah = "apple \t \"banana\"";
-char b = 'b';
-char bb = '\\';
 
 int main(void)
 {
-	char *t;
+	LETTER *t;
 	while ((t = gettoken()) != NULL)
-		printf("%s", t);
-
-	return 0;
+		DISPLAY("%s", t);
+	ENDWITH 0;
 }
 
 char *gettoken(void)
@@ -83,16 +78,24 @@ char *code(char c)
 {
 	struct charinfo *ci;
 	char *t = token;
+
 	*t++ = c;
 	if (asalpha(c)) {
-		while ((ci = getparsed()) == CODE && asalnum(c = ci->ch)) {
+		while ((ci = getparsed())->mode == CODE &&
+		       asalnum(c = ci->ch)) {
 			*t++ = c;
 			freeci(ci);
 		}
 		stored = ci;
 	}
 	*t = '\0';
-	return token;
+	return replacetkn(token);
+}
+
+char *replacetkn(char *name)
+{
+	char *defn = lookup(name);
+	return (defn == NULL) ? name : defn;
 }
 
 char *preproc(char c)
@@ -129,8 +132,7 @@ char *preproc(char c)
 		printf("error: Failed to parse #define: %s", token);
 		return NULL;
 	}
-	printf("** definition ** '%s'='%s'", name, defn);
-
+	install(name, defn);
 	return NULL;
 }
 

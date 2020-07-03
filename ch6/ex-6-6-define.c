@@ -13,27 +13,24 @@
 #include "table.h"
 
 #define MAXWORD 1000
-#define LETTER char
-#define DISPLAY printf
-#define ENDWITH return
 
 static struct charinfo *stored;
 char *gettoken(void);
 char *code(char c);
-char *replacetkn(char *t);
+char *checkdefines(char *t);
 char *preproc(char c);
 int asalpha(char c);
 int asalnum(char c);
 
 char token[MAXWORD];
-enum filtermode mode;
+char *ERROR = "ERROR";
 
 int main(void)
 {
-	LETTER *t;
-	while ((t = gettoken()) != NULL)
-		DISPLAY("%s", t);
-	ENDWITH 0;
+	char *t;
+	while ((t = gettoken()) != NULL && t != ERROR)
+		printf("%s", t);
+	return 0;
 }
 
 char *gettoken(void)
@@ -53,25 +50,20 @@ char *gettoken(void)
 		return NULL;
 	}
 
-	mode = ci->mode;
-	switch (mode) {
+	switch (ci->mode) {
 	case CODE:
 		t = code(ci->ch);
-		if (t == NULL)
-			return gettoken();
-		else
-			return t;
+		break;
 	case PREPROC:
 		t = preproc(ci->ch);
-		if (t == NULL)
-			return gettoken();
-		else
-			return t;
+		break;
 	default:
 		token[0] = ci->ch;
 		token[1] = '\0';
-		return token;
+		break;
 	}
+	freeci(ci);
+	return (t == NULL) ? gettoken() : t;
 }
 
 char *code(char c)
@@ -89,10 +81,10 @@ char *code(char c)
 		stored = ci;
 	}
 	*t = '\0';
-	return replacetkn(token);
+	return checkdefines(token);
 }
 
-char *replacetkn(char *name)
+char *checkdefines(char *name)
 {
 	char *defn = lookup(name);
 	return (defn == NULL) ? name : defn;
@@ -101,36 +93,57 @@ char *replacetkn(char *name)
 char *preproc(char c)
 {
 	struct charinfo *ci;
-	char *name, *endname, *defn, *p, *t = token;
+	char *name, *defn, *d, *t = token;
 
 	if (c != '#') {
 		printf("error: Expected '#' at start of preproc, got %d\n", c);
-		return NULL;
+		return ERROR;
 	}
 	*(t++) = c;
-	while ((ci = getparsed())->mode == PREPROC)
+	/* copy preprocessor statement to token */
+	while ((ci = getparsed())->mode == PREPROC) {
 		*(t++) = ci->ch;
+		freeci(ci);
+	}
 	stored = ci;
 	*t = '\0';
-	while (t > token && isspace(*(t - 1)))
-		*--t = '\0';
+
+	/* if not a #define return as is */
 	if (strncmp(token, "#define", 7) != 0 || !isspace(token[7]))
 		return token;
 
-	p = token + 7;
-	while (isspace(*++p))
+	/* trim trailing space */
+	while (t > token && isspace(*(t - 1)))
+		*--t = '\0';
+
+	/* trim whitespace before name */
+	d = token + 7;
+	while (isspace(*++d))
 		;
-	name = p;
-	while (asalnum(*++p))
+
+	/* set name */
+	name = d;
+	if (!asalpha(*name)) {
+		printf("error: Expected #define identifier (%s).\n", token);
+		return ERROR;
+	}
+	while (asalnum(*++d))
 		;
-	endname = p;
-	while (isspace(*++p))
-		;
-	defn = p;
-	*endname = '\0';
-	if (p > t) {
-		printf("error: Failed to parse #define: %s", token);
-		return NULL;
+
+	if (*d == '\0') {
+		defn = d;
+	} else {
+		/* set defn */
+		if (!isspace(*d)) {
+			/* gcc doesn't require this */
+			printf("error: Expected space after identifier: (%s)\n",
+			       token);
+			return ERROR;
+		}
+		*d = '\0';
+		while (isspace(*++d))
+			;
+		defn = d;
 	}
 	install(name, defn);
 	return NULL;
@@ -138,10 +151,13 @@ char *preproc(char c)
 
 int asalpha(char c)
 {
-	return isalpha(c) || (c == '-');
+	return isalpha(c) || (c == '_');
 }
+
+#define SORT_OF_LETTER asalpha(c)
+#define NUMERAL isdigit(c)
 
 int asalnum(char c)
 {
-	return isalnum(c) || asalpha(c);
+	return SORT_OF_LETTER || NUMERAL;
 }

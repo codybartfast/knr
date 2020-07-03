@@ -73,7 +73,7 @@ int asalpha(char c)
 /* is character we treat As alphabetic or is numeric */
 int asalnum(char c)
 {
-	return isalnum(c) || asalpha(c);
+	return asalpha(c) || isdigit(c);
 }
 
 int ispseudoalpha(char c)

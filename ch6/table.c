@@ -4,6 +4,12 @@
 
 #define HASHSIZE 101
 
+struct nlist {
+	struct nlist *next;
+	char *name;
+	char *defn;
+};
+
 struct nlist *delist(char *name, struct nlist *np);
 struct nlist *nllookup(char *s);
 unsigned hash(char *s);
@@ -36,7 +42,8 @@ struct nlist *delist(char *name, struct nlist *np)
 	return np;
 }
 
-char *lookup(char *s){
+char *lookup(char *s)
+{
 	struct nlist *nl = nllookup(s);
 	return (nl == NULL) ? NULL : nl->defn;
 }

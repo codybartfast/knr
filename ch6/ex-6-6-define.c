@@ -93,13 +93,14 @@ char *checkdefines(char *name)
 char *preproc(char c)
 {
 	struct charinfo *ci;
-	char *name, *defn, *d, *t = token;
+	char *name, *d, *t = token;
 
 	if (c != '#') {
 		printf("error: Expected '#' at start of preproc, got %d\n", c);
 		return ERROR;
 	}
 	*(t++) = c;
+
 	/* copy preprocessor statement to token */
 	while ((ci = getparsed())->mode == PREPROC) {
 		*(t++) = ci->ch;
@@ -108,7 +109,7 @@ char *preproc(char c)
 	stored = ci;
 	*t = '\0';
 
-	/* if not a #define return as is */
+	/* if not #define return as is */
 	if (strncmp(token, "#define", 7) != 0 || !isspace(token[7]))
 		return token;
 
@@ -130,10 +131,8 @@ char *preproc(char c)
 	while (asalnum(*++d))
 		;
 
-	if (*d == '\0') {
-		defn = d;
-	} else {
-		/* set defn */
+	/* advance to defin */
+	if (*d != '\0') {
 		if (!isspace(*d)) {
 			/* gcc doesn't require this */
 			printf("error: Expected space after identifier: (%s)\n",
@@ -143,9 +142,8 @@ char *preproc(char c)
 		*d = '\0';
 		while (isspace(*++d))
 			;
-		defn = d;
 	}
-	install(name, defn);
+	install(name, d);
 	return NULL;
 }
 

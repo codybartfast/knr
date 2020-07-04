@@ -1,0 +1,47 @@
+[[user:codybartfast|Codybartfast]] ([[K&R2 solutions:Ancillary:Category numbers|category 0]]):
+
+The orignal itoa doesn't work because the range of negative numbers is one greater than the range of positive numbers.  So instead of converting negative numbers to positive, we can convert postive to negative and use the original method with just a few small changes:
+<c>
+void itoa(int n, char s[])
+{
+	int i, sign;
+	if ((sign = n) > 0)
+		n = -n;
+	i = 0;
+	do {
+		s[i++] = '0' - (n % 10);
+	} while ((n /= 10) < 0);
+	if (sign < 0)
+		s[i++] = '-';
+	s[i] = '\0';
+	reverse(s);
+}
+</c>
+This will work with C99 but isn't strictly C89 compliant.  With C99 I think we can assume -13/10 is -1 and -13%10 is -3 because division will truncate towards zero.  However, C89 also allowed for floor towards negative infinity.  In that case -13/10 = -2 with -13%10 = 7 was also valid.  Both these satisfy the C89 requirement that "(a/b)*b + a%b = a" (A7.6, page 205).  This version checks the behaviour of quotient and then adjusts the result of % if needed:
+<c>
+void itoa89(int n, char s[])
+{
+	int i, sign;
+
+	/* 
+	 * Test if we're getting floor quotient -2, instead of 'normal' 
+	 * truncated quotient, -1.  If so, % will give positive remainders
+	 * for negative dividends and we need to subract 10 to get 'normal'
+	 * negative remainders.
+	 */
+
+	int adj = ((-13 / 10) == -2) ? 10 : 0;
+
+	if ((sign = n) > 0)
+		n = -n;
+	i = 0;
+	do {
+		/* adj will ensure we get a negative remainder */
+		s[i++] = '0' - ((n % 10) - adj);
+	} while ((n /= 10) < 0);
+	if (sign < 0)
+		s[i++] = '-';
+	s[i] = '\0';
+	reverse(s);
+}
+</c>

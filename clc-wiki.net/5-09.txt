@@ -1,0 +1,30 @@
+== Solution by [[user:codybartfast|Codybartfast]] ([[K&R2 solutions:Ancillary:Category numbers|cat 0]]) ==
+
+The two functions demonstrate slightly different ways of accessing datetab, i.e.,  *(daytab[leap] + i)  vs  *(*(daytab + leap) + i).
+<c>
+static char row0[] = { 0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+static char row1[] = { 0, 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+static char row2[] = "Third row of different length!";
+static char *daytab[] = { row0, row1, row2 };
+
+int day_of_year(int year, int month, int day)
+{
+	int i, leap;
+
+	leap = (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
+	for (i = 1; i < month; i++)
+		day += *(daytab[leap] + i);
+	return day;
+}
+
+void month_day(int year, int yearday, int *pmonth, int *pday)
+{
+	int i, leap;
+
+	leap = (year % 4 == 0 && year % 100 != 0) || year % 400 == 0;
+	for (i = 1; yearday > *(*(daytab + leap) + i); i++)
+		yearday -= *(*(daytab + leap) + i);
+	*pmonth = i;
+	*pday = yearday;
+}
+</c>

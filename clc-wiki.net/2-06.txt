@@ -1,0 +1,40 @@
+(Codybartfast) Thank you Luke for your observation about p+1-n vs p-n.  I too had a 'working' solution with p-n, but you got me to investigate and my solution only worked if the first (rightmost) bit was 'called' position 1, however, I'm pretty sure the first position should be position 0, i.e.:
+<pre>
+Using setbits(93, 4, 3, 211):
+
+p = 4
+n = 3
+          p
+ pos:  76543210
+          vvv 
+   x:  01011101 =  93
+   y:  11010011 = 211
+ 
+rslt:  01010001 =  81
+
+There are two bits to the right of the selection so we will need to shift
+the selection left by two: "<< 2".
+
+But if p is zero-based p - n would give a shift of just 1, (4 - 3), whereas 
+p + 1 - n gives the correct value of 2.
+</pre>
+
+[[user:codybartfast|Codybartfast]]'s solution ([[K&R2 solutions:Ancillary:Category numbers|cat 0]]):
+<c>
+/*
+ * If n has its maximum value (e.g. 32) then "<< n" is undefined (Reference 
+ * Manual A7.8 p206).  So to avoid "<< 32" I use "<< (n - 1) << 1".  (On my
+ * machine "<< 32" is treated as "<< 0".)
+ */
+
+unsigned setbits(unsigned x, unsigned p, unsigned n, unsigned y)
+{
+	unsigned mask;
+	if (n == 0) {
+		mask = 0;
+	} else {
+		mask = ~(~0 << (n - 1) << 1) << (p + 1 - n);
+	}
+	return (x & ~mask) | (y & mask);
+}
+</c>

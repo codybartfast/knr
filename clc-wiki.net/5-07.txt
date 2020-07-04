@@ -1,0 +1,68 @@
+== Solution by [[user:codybartfast|codybartfast]] ([[K&R2 solutions:Ancillary:Category numbers|Category 0]]) ==
+
+Like others I initially saw no measurable difference in performance.  So I used a file containing 3.25M lines, each containing one letter from War and Peace. (This was to emphasis line operations over the per character operations of readline.)  I also removed the sorting and writing.  Then the updated readlines was faster.  Running the program 25 times with each version the original averaged 68ms and the updated version 38ms, an improvement of about 43%.
+<pre>
+Milliseconds  Orignal     Updated
+              =======     =======
+                47          47
+                47          31
+                78          31
+                78          31
+                63          47
+                63          63
+                63          47
+                63          47
+                78          47
+                63          16
+                63          47
+                63          47
+                63          47
+                47          31
+                63          31
+                78          63
+                78          31
+                78          47
+                47          31
+                63          31
+                78          47
+                78          16
+                63          31
+                94          31
+                63          16
+              =======     =======
+        Mean    66          38
+</pre>
+<c>
+char *lineptr[MAXLINES];
+char buffer[BUFSIZE];
+
+int main(void)
+{
+	int nlines;
+
+	if ((nlines = readlines(lineptr, buffer)) >= 0) {
+		qsort(lineptr, 0, nlines - 1); /* These lines removed for */
+		writelines(lineptr, nlines);   /*   performance testing.  */
+		return 0;
+	} else {
+		printf("error: input too big to sort\n");
+		return 1;
+	}
+}
+
+int readlines(char *lineptr[], char *buffer)
+{
+	int len, nlines;
+	char *bufmax = buffer + BUFSIZE - MAXLEN;
+
+	nlines = 0;
+	while ((len = getline(buffer, MAXLEN)) > 0) {
+		lineptr[nlines++] = buffer;
+		buffer += len;
+		*(buffer - 1) = '\0'; /* delete newline */
+		if (nlines >= MAXLINES || buffer > bufmax)
+			return -1;
+	}
+	return nlines;
+}
+</c>

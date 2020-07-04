@@ -1,0 +1,14 @@
+== Solution by [[user:codybartfast|codybartfast]] ([[K&R2 solutions:Ancillary:Category numbers|Category 0]]) ==
+
+A slight variation on other answers:
+
+<c>
+void strcat(char *s, char *t)
+{
+	if (*s)
+		while (*++s)
+			;
+	while ((*s++ = *t++))
+		;
+}
+</c>

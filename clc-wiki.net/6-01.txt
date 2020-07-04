@@ -1,0 +1,248 @@
+== Solution by [[user:codybartfast|codybartfast]] ==
+[[K&R2 solutions:Ancillary:Category numbers|Category 0]]
+
+This uses a function <code>filter_code</code> to remove preprocessor statements, comments and double quotes.  This enables a <code>filtered</code> function that can then be used like <code>getchar</code> by an almost unchanged <code>getword</code>.
+
+Because <code>getch</code> and <code>ungetch</code> are used by both <code>getword</code> and <code>filter_code</code>, <code>getch</code> and <code>ungetch</code> take a struct called <code>stream</code> as a parameter that comprises the function providing characters (e.g., <code>getchar</code> or <code>filtered</code>), the buffer for ungetch, and the buffer index.
+
+Not many edge case are handled, e.g. only single line preprocessor statements are supported.
+<c>
+/* Exercise 6-1 */
+
+#include <ctype.h>
+#include <stdio.h>
+#include <string.h>
+#include "filter-code.h"
+
+#define MAXWORD 100
+#define NKEYS (sizeof keytab / sizeof(struct key))
+
+struct key {
+	char *word;
+	int count;
+} keytab[] = { { "auto", 0 },	  { "break", 0 },    { "case", 0 },
+	       { "char", 0 },	  { "const", 0 },    { "continue", 0 },
+	       { "default", 0 },  { "do", 0 },	     { "double", 0 },
+	       { "else", 0 },	  { "enum", 0 },     { "extern", 0 },
+	       { "float", 0 },	  { "for", 0 },	     { "goto", 0 },
+	       { "if", 0 },	  { "int", 0 },	     { "long", 0 },
+	       { "register", 0 }, { "return", 0 },   { "short", 0 },
+	       { "signed", 0 },	  { "sizeof", 0 },   { "static", 0 },
+	       { "struct", 0 },	  { "switch", 0 },   { "typedef", 0 },
+	       { "union", 0 },	  { "unsigned", 0 }, { "void", 0 },
+	       { "volatile", 0 }, { "while", 0 } };
+
+int filtered(void);
+int getword(char *, int);
+int binsearch(char *, struct key *, int);
+int asalpha(char c);
+int asalnum(char c);
+
+int nkeys;
+struct filterstate filterstate;
+int filterbuff[MAXCHBUF];
+struct stream filteredstream = { filtered, filterbuff, 0 };
+
+int main(void)
+{
+	int n;
+	char word[MAXWORD];
+	nkeys = (sizeof keytab / sizeof(struct key));
+
+	while (getword(word, MAXWORD) != EOF)
+		if (isalpha(word[0]))
+			if ((n = binsearch(word, keytab, nkeys)) >= 0)
+				keytab[n].count++;
+	for (n = 0; n < nkeys; n++)
+		if (keytab[n].count > 0)
+			printf("%4d %s\n", keytab[n].count, keytab[n].word);
+	return 0;
+}
+
+/* like getch, but preproc, comments and strings are removed */
+int filtered(void)
+{
+	return filter_code(streamin, filterstate);
+}
+
+int binsearch(char *word, struct key tab[], int n)
+{
+	int cond;
+	int low, high, mid;
+
+	low = 0;
+	high = n - 1;
+	while (low <= high) {
+		mid = (low + high) / 2;
+		if ((cond = strcmp(word, tab[mid].word)) < 0)
+			high = mid - 1;
+		else if (cond > 0)
+			low = mid + 1;
+		else
+			return mid;
+	}
+	return -1;
+}
+
+int getword(char *word, int lim)
+{
+	int c;
+	char *w = word;
+
+	while (isspace(c = getch(filteredstream)))
+		;
+	if (c != EOF)
+		*w++ = c;
+	if (!asalpha(c)) {
+		*w = '\0';
+		return c;
+	}
+	for (; --lim > 0; w++)
+		if (!asalnum(*w = getch(filteredstream))) {
+			ungetch(filteredstream, *w);
+			break;
+		}
+	*w = '\0';
+	return word[0];
+}
+
+/* is character we treat As alphabetic */
+int asalpha(char c){
+	return isalpha(c) || c == '_';
+}
+
+/* is character we treat As alphabetic or is numeric */
+int asalnum(char c){
+	return isalnum(c) || c == '_';
+}
+</c>
+<code>filter-code.h</code>
+<c>
+#include "stream.h"
+
+struct filterstate {
+	int mode;
+};
+
+struct filterstate newfilterstate(void);
+int filter_code(struct stream stream, struct filterstate state);
+</c>
+<code>filter-code.h</code>
+<c>
+#include <stdio.h>
+#include "filter-code.h"
+
+enum filtermode { CODE = 0, PREPROC, COMMENT, DOUBLE};
+
+struct filterstate newfilterstate(void)
+{
+	struct filterstate s = { CODE };
+	return s;
+}
+
+int filter_code(struct stream stream, struct filterstate state)
+{
+	int c = getch(stream);
+
+	switch (state.mode) {
+	case CODE:
+		switch (c) {
+		case '#':
+			state.mode = PREPROC;
+			return filter_code(stream, state);
+		case '/':
+			if ((c = getch(stream)) == '*') {
+				state.mode = COMMENT;
+				return filter_code(stream, state);
+			} else {
+				ungetch(stream, c);
+				return '/';
+			}
+		case '"':
+			state.mode = DOUBLE;
+			return filter_code(stream, state);
+		default:
+			return c;
+		}
+	case PREPROC:
+		/* Assumes preproc statements are single line */
+		switch (c) {
+		case '\n':
+			state.mode = CODE;
+			return filter_code(stream, state);
+		default:
+			return filter_code(stream, state);
+		}
+	case COMMENT:
+		switch (c) {
+		case '*':
+			if ((c = getch(stream)) == '/') {
+				state.mode = CODE;
+				return filter_code(stream, state);
+			} else {
+				ungetch(stream, c);
+				return filter_code(stream, state);
+			}
+		default:
+			return filter_code(stream, state);
+		}
+
+	case DOUBLE:
+		switch (c) {
+		case '\\':
+			if (getch(stream) == EOF)
+				return EOF;
+			/* ignore escaped char */
+			return filter_code(stream, state);
+		case '"':
+			state.mode = CODE;
+			return filter_code(stream, state);
+		default:
+			return filter_code(stream, state);
+		}
+	default:
+		printf("error: Unexpected mode %d", state.mode);
+		return EOF;
+	}
+}
+</c>
+<code>stream.h</code>
+<c>
+#define MAXCHBUF (1 << 1)
+
+struct stream streamin;
+
+struct stream {
+	int (*getcharacter)(void);
+	int *chbuf;
+	int chbufidx;
+};
+
+int getch(struct stream stream);
+void ungetch(struct stream stream, int c);
+</c>
+<code>stream.c</code>
+<c>
+#include <stdio.h>
+#include "stream.h"
+
+static int inbuff[MAXCHBUF];
+struct stream streamin = { getchar, inbuff, 0 };
+
+int getch(struct stream stream)
+{
+	return (stream.chbufidx > 0) ?
+				 stream.chbuf[--stream.chbufidx] :
+				 stream.getcharacter();
+}
+
+void ungetch(struct stream stream, int c)
+{
+	if (stream.chbufidx >= MAXCHBUF)
+		printf("ungetch: too many characters\n");
+	else {
+		stream.chbuf[stream.chbufidx++] = c;
+	}
+}
+</c>
+<small>Also on [https://github.com/codybartfast/knr github]</small>

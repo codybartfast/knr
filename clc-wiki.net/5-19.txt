@@ -1,0 +1,63 @@
+== Solution by [[user:codybartfast|codybartfast]] ==
+[[K&R2 solutions:Ancillary:Category numbers|Category 0]]
+
+I ''think'' we only need parantheses when <code>*</code> is followed by <code>()</code> or <code>[]</code> because these have higher precedence than <code>*</code>.  So with the expression:
+<pre>
+x [3] * * () * * char
+</pre>
+we only need one pair of parantheses for grouping *:
+<pre>
+char **(**x[3])()
+</pre>
+But the books version of <code>undcl</code> produces:
+<pre>
+char (*(*(*(*x[3]))()))
+</pre>
+We can verify that these two are equivalent by checking they produce the same result with <code>dcl</code>:
+<pre>
+x:  array[3] of pointer to pointer to function returning pointer to pointer to char
+</pre>
+
+The function <code>needparens</code> looks ahead to see if * is followed by <code>(</code> or <code>[</code>
+<c>
+int main(void)
+{
+	int type;
+	char temp[MAXTOKEN];
+
+	while (gettoken() != EOF) {
+		strcpy(out, token);
+		while ((type = gettoken()) != '\n')
+			if (type == PARENS || type == BRACKETS)
+				strcat(out, token);
+			else if (type == '*') {
+				if (needparens())
+					sprintf(temp, "(*%s)", out);
+				else
+					sprintf(temp, "*%s", out);
+				strcpy(out, temp);
+			} else if (type == NAME) {
+				sprintf(temp, "%s %s", token, out);
+				strcpy(out, temp);
+			} else
+				printf("invaid input at %s\n", token);
+		printf("%s\n", out);
+	}
+	return 0;
+}
+
+int needparens(void)
+{
+	int c1, c2, rslt;
+
+	rslt = 0;
+	if ((c1 = getch()) == ' ') {
+		if ((c2 = getch()) == '(' || c2 == '[')
+			rslt = 1;
+		ungetch(c2);
+	}
+	ungetch(c1);
+	return rslt;
+}
+</c>
+<small>Full code on [https://github.com/codybartfast/knr github]</small>

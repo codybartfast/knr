@@ -1,0 +1,25 @@
+== Solution by [[user:codybartfast|codybartfast]] ([[K&R2 solutions:Ancillary:Category numbers|Category  0]]) ==
+
+I tested with the following cases:
+<pre>
+	"a", "" -> 1
+	"duck", "duck" -> 1
+	"Unsubtle", "subtle" -> 1
+	"frankly", "frank" -> 0
+	"aaaaaX", "aaaaX" -> 1
+</pre>
+These cases matched the results of Bryan, menonsahab and seankndy's code.  Nicholas, Jose and Prabhat's code produced similar results but have "a", "" -> 0.  The others had potential errors, often with the "duck" or "aaaaX" case.
+
+My own solution is neither pretty nor efficient:
+<c>
+int strend(char *s, char *t)
+{
+	char *cs, *ct;
+	do {
+		for (cs = s, ct = t; *cs == *ct; cs++, ct++)
+			if (*cs == '\0')
+				return 1;
+	} while (*s++ != '\0');
+	return 0;
+}
+</c>

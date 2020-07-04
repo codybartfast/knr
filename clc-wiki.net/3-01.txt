@@ -1,0 +1,46 @@
+[[user:codybartfast|Codybartfast]] ([[K&R2 solutions:Ancillary:Category numbers|category 0]]):<br />
+With arrays containing 33M-134M items and then searching for each item I found a measurable difference in run-time with the modified version taking approx. 4% longer.  The extra steps to terminate in the modified version being more expensive than the cost of the extra test in the original version.
+
+<table border="1" style="border: 1px solid black; border-collapse: collapse; text-align: right; width: 40%; ">
+<tr><td align="right"> Size </td><td align="right">Original</td><td align="right">Modified</td><td align="right">Diff</td></tr>
+<tr><td align="right"> 2^25 </td><td align="right">4.042s</td><td align="right">4.188s</td><td align="right">3.6%</td></tr>
+<tr><td align="right"> 2^26 </td><td align="right">8.365s</td><td align="right">8.551s</td><td align="right">2.2%</td></tr>
+<tr><td align="right"> 2^27 </td><td align="right">16.854s</td><td align="right">17.818s</td><td align="right">5.7%</td></tr>
+</table>
+(Each value the is average of 3 runs.<br />
+Timings made with linux 'time' command.)
+<c>
+#define SIZE 1 << 25
+
+int binsearch(int x, int v[], int n);
+
+int values[SIZE];
+
+int main(void)
+{
+	int i, n = SIZE;
+
+	for (i = 0; i < n; i++)
+		values[i] = i;
+	/* search for every item */
+	for (i = 0; i < n; i++)
+		binsearch(i, values, n);
+	return 0;
+}
+
+int binsearch(int x, int v[], int n)
+{
+	int low, high, mid;
+
+	low = 0;
+	high = n - 1;
+	while (low < high) {
+		mid = (low + high) / 2;
+		if (x > v[mid])
+			low = mid + 1;
+		else
+			high = mid;
+	}
+	return (x == v[low]) ? low : -1;
+}
+</c>

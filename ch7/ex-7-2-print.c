@@ -12,18 +12,23 @@
  * lines split (tabstop)
  * Justify
  * detab (tabstop)
- * 
- *      ------->########<--------
- * 
+ *
+ *      ------->########<-------
+ *      X><X
  */
 
 #include <stdio.h>
 #include "bsbuff.h"
+#include "nongraphic.h"
+
+#include "limits.h"
 
 int main(void)
 {
-	int c, (*bsbuffer)(void) = backspace_buffer(&getchar);
-	while((c = (*bsbuffer)()) != EOF)
+	int c;
+	int (*bsbuffed)(void) = backspace_buffer(&getchar);
+	int (*replaced)(void) = replace_nongraphic(bsbuffed);
+	while ((c = (*replaced)()) != EOF)
 		putchar(c);
 	return 0;
 }

@@ -6,29 +6,28 @@
  * according to local custom, and break long text lines.
  */
 
-/*
- * Backspace buffer
- * substitution
- * lines split (tabstop)
- * Justify
- * detab (tabstop)
- *
- *      ------->########<-------
- *      X><X
- */
-
+#include <limits.h>
 #include <stdio.h>
 #include "bsbuff.h"
 #include "nongraphic.h"
+#include "detab.h"
+#include "linesplit.h"
 
-#include "limits.h"
+int tabsize = 6;
+int linelen = 76;
 
 int main(void)
 {
 	int c;
-	int (*bsbuffed)(void) = backspace_buffer(&getchar);
-	int (*replaced)(void) = replace_nongraphic(bsbuffed);
-	while ((c = (*replaced)()) != EOF)
+	int (*bsbuffed)(void), (*replaced)(void), (*linessplit)(void);
+
+	configure_tabs(tabsize);
+
+	bsbuffed = backspace_buffer(&getchar);
+	replaced = replace_nongraphic(bsbuffed);
+	linessplit = split_lines(replaced, linelen);
+
+	while ((c = (*linessplit)()) != EOF)
 		putchar(c);
 	return 0;
 }

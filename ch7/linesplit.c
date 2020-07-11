@@ -23,10 +23,11 @@ static int goteof = 0;
 static int split(void);
 static void store(char c);
 
-int (*split_lines(int (*get_char)(void), int length))(void)
+int (*split_lines(int (*get_char)(void), int linelen, int maxrollover))(void)
 {
-	maxlen = length;
 	source = get_char;
+	maxlen = linelen;
+	maxroll = maxrollover;
 
 	buffsize = maxlen + 1;
 	free(buff);
@@ -54,13 +55,14 @@ int split(void)
 		c = *(buff + pending++);
 		return c;
 	} else if (lineend >= 0) {
+		int end;
 		/* have returned buffered content, now finish this line */
 		if (puthyphen) {
 			puthyphen = 0;
 			return '-';
 		}
 		/* copy unused chars to start of (next) line */
-		int end = next;
+		end = next;
 		column = next = 0;
 		for (; pending < end; pending++)
 			store(*(buff + pending));

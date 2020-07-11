@@ -1,1 +1,1 @@
-int (*split_lines(int (*)(void), int length))(void);
+int (*split_lines(int (*)(void), int linelen, int maxrollover))(void);

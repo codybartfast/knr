@@ -17,6 +17,7 @@
         "tuple": "c",
         "utility": "c",
         "type_traits": "c",
-        "typeinfo": "c"
+        "typeinfo": "c",
+        "string_view": "c"
     },
 }

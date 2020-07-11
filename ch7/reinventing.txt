@@ -1,25 +1,24 @@
 1	7	13	19	25	31	37	43	49	55	61	67	73	Next Line	13
  
- 
  ************************
  *                      *
  *      backspaces      *
- *  >------->########<--------< *
+ *  >------->########<-------<  *
  *                      *
  *     non-graphic      *
  *   [><]   *
  *                      *
  *         tabs         *
- *				*
+ *	1	2	3	*
+ *                      *
  ************************
-
 
 == Introduction ==
 
 The emergence of a new organizational model
 
 
-You		never change things by fighting the existing reality. To change something, build a new model that makes the existing model obsolete.
+You never change things by fighting the existing reality. To change something, build a new model that makes the existing model obsolete.
 ::Richard Buckminster Fuller::
 
 

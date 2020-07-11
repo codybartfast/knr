@@ -13,21 +13,26 @@
 #include "detab.h"
 #include "linesplit.h"
 
-int tabsize = 6;
-int linelen = 76;
+static const int tabsize = 6;
+static const int linelen = 76;
+static const int maxrollover = 7;
 
 int main(void)
 {
 	int c;
-	int (*bsbuffed)(void), (*replaced)(void), (*linessplit)(void);
+	int (*bsbuffed)(void), (*replaced)(void), (*linessplit)(void),
+		(*detabed)(void);
+	char *(*readlines)(void);
 
 	configure_tabs(tabsize);
 
 	bsbuffed = backspace_buffer(&getchar);
 	replaced = replace_nongraphic(bsbuffed);
-	linessplit = split_lines(replaced, linelen);
+	linessplit = split_lines(replaced, linelen, maxrollover);
+	detabed = detab(linessplit, linelen);
 
-	while ((c = (*linessplit)()) != EOF)
+	while ((c = (*detabed)()) != EOF)
 		putchar(c);
+
 	return 0;
-}
+} /* consistent line len */

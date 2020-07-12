@@ -1,0 +1,54 @@
+== Solution by [[user:codybartfast|codybartfast]] ==
+[[K&R2 solutions:Ancillary:Category numbers|Category 0]]
+
+<pre>
+Features:
+
+    * a buffer to remove text that is followed by backsapces,
+    * replacement of non-grahic characters,
+    * line split includeing backtracking and hyphen insertion,
+    * left, centre or right aligned or justified text,
+    * expansion of tabs to spaces.
+
+Each of these is implemented separately, taking a function like 'getchar' and returning a new function that is also like 'getchar'.  This enables the features to be composed in any order (though not necessarily with meaningful results), or used separately.  In any case the final function can be used in the same way as getchar.  I haven't posted most of the code because it is quite long.  But I have intentionally made this paragraph quite long because it was originally a single line - but here is formatted using the code.
+Each  of  these is  implemented  separately,  taking a  function  like
+'getchar' and  returning a new function  that is also  like 'getchar'.
+This enables  the features  to be  composed in  any order  (though not
+necessarily with meaningful results), or used separately.  In any case
+the final function can be used in the  same way as getchar.  I haven't
+posted most of the  code because it is quite long.   But I have inten-
+tionally made  this paragraph quite long  because it was  originally a
+single line - but here is formatted using the code.
+</pre>
+
+<c>
+#include <stdio.h>
+#include "bsbuff.h"
+#include "nongraphic.h"
+#include "linesplit.h"
+#include "align.h"
+#include "detab.h"
+
+int tabsize = 6;
+int linelen = 70;
+int maxrollover = 7;
+
+int main(void)
+{
+	int c, (*getch)(void);
+
+	configure_tabs(tabsize);
+
+	getch = backspace_buffer(&getchar);
+	getch = replace_nongraphic(getch);
+	getch = split_lines(getch, linelen, maxrollover);
+	getch = align(getch, linelen, maxrollover, ALIGN_JUSTIFIED);
+	getch = detab(getch, linelen);
+
+	while ((c = (*getch)()) != EOF)
+		putchar(c);
+
+	return 0;
+}
+</c>
+<small>Full code on [https://github.com/codybartfast/knr github]</small>

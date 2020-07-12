@@ -5,6 +5,7 @@
 #include "detab.h"
 
 static int shift(void);
+static int justify(void);
 static char *trim(char *line);
 static char *stats(char *line);
 
@@ -21,7 +22,7 @@ int (*align(int (*get_char)(void), int linelen, int maxroll, int align))(void)
 
 	readline = read_lines(get_char);
 
-	return &shift;
+	return (align == ALIGN_JUSTIFIED) ? &justify : &shift;
 }
 
 int shift(void)
@@ -32,8 +33,8 @@ int shift(void)
 	if (line == NULL) {
 		if ((line = readline()) == NULL || line == READLINE_ERROR)
 			return EOF;
-		else
-			lp = stats(trim(line));
+
+		lp = stats(trim(line));
 		if (tabs || _align == ALIGN_LEFT)
 			pad = 0;
 		else if (_align == ALIGN_RIGHT)
@@ -56,6 +57,44 @@ int shift(void)
 		return '\n';
 	}
 	return *lp++;
+}
+
+int justify(void)
+{
+	char c;
+	static char *line = NULL, *lp;
+	static double rate, target = 0.5;
+	static int actual = 0, pad = 0;
+
+	if (line == NULL) {
+		int tail;
+
+		if ((line = readline()) == NULL || line == READLINE_ERROR)
+			return EOF;
+		lp = stats(trim(line));
+		tail = _linelen - width;
+		rate = (spaces && tail <= _maxroll) ?
+			       ((double)(spaces + tail)) / spaces :
+			       1;
+	}
+
+	if (pad) {
+		pad--;
+		return ' ';
+	}
+
+	if ((c = *lp++) == ' ') {
+		target += rate;
+		pad = target - actual - 1;
+		actual += (pad + 1);
+		return ' ';
+	}
+
+	if (c == '\0') {
+		line = NULL;
+		return '\n';
+	}
+	return c;
 }
 
 char *trim(char *line)

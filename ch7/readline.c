@@ -29,7 +29,7 @@ char *(*read_lines(int (*get_char)(void)))(void)
 	return &read;
 }
 
-char *growline(char* pos)
+char *growline(char *pos)
 {
 	char *l, *n;
 	int newlen = 2 * len;

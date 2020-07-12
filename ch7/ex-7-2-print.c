@@ -6,7 +6,6 @@
  * according to local custom, and break long text lines.
  */
 
-#include <limits.h>
 #include <stdio.h>
 #include "bsbuff.h"
 #include "nongraphic.h"
@@ -14,24 +13,23 @@
 #include "align.h"
 #include "detab.h"
 
-static const int tabsize = 6;
-static const int linelen = 76;
-static const int maxrollover = 7;
+int tabsize = 6;
+int linelen = 76;
+int maxrollover = 8;
 
 int main(void)
 {
-	int c, (*get_char)(void);
+	int c, (*getch)(void);
 
 	configure_tabs(tabsize);
 
-	get_char = &getchar;
-	get_char = backspace_buffer(get_char);
-	get_char = replace_nongraphic(get_char);
-	get_char = split_lines(get_char, linelen, maxrollover);
-	get_char = align(get_char, linelen, maxrollover, ALIGN_CENTRE);
-	get_char = detab(get_char, linelen);
+	getch = backspace_buffer(&getchar);
+	getch = replace_nongraphic(getch);
+	getch = split_lines(getch, linelen, maxrollover);
+	getch = align(getch, linelen, maxrollover, ALIGN_JUSTIFIED);
+	getch = detab(getch, linelen);
 
-	while ((c = (*get_char)()) != EOF)
+	while ((c = (*getch)()) != EOF)
 		putchar(c);
 
 	return 0;

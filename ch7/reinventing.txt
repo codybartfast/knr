@@ -1,4 +1,4 @@
-1	7	13	19	25	31	37	43	49	55	61	67	73	Next Line	13
+1	7	13	19	25	31	37	43	49	55	61	67	73	Next Line	13	19	25	31	37	43	49	55	61	>Line End>
  
  ************************
  *                      *
@@ -125,4 +125,4 @@ If we are to overcome the daunting problems of our times, we will need new types
 
 	
 To find out more...
-www.reinventingorganizations.com
+www.reinventingorganizations.com/read

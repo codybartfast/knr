@@ -10,8 +10,9 @@
 #include <stdio.h>
 #include "bsbuff.h"
 #include "nongraphic.h"
-#include "detab.h"
 #include "linesplit.h"
+#include "align.h"
+#include "detab.h"
 
 static const int tabsize = 6;
 static const int linelen = 76;
@@ -19,20 +20,19 @@ static const int maxrollover = 7;
 
 int main(void)
 {
-	int c;
-	int (*bsbuffed)(void), (*replaced)(void), (*linessplit)(void),
-		(*detabed)(void);
-	char *(*readlines)(void);
+	int c, (*get_char)(void);
 
 	configure_tabs(tabsize);
 
-	bsbuffed = backspace_buffer(&getchar);
-	replaced = replace_nongraphic(bsbuffed);
-	linessplit = split_lines(replaced, linelen, maxrollover);
-	detabed = detab(linessplit, linelen);
+	get_char = &getchar;
+	get_char = backspace_buffer(get_char);
+	get_char = replace_nongraphic(get_char);
+	get_char = split_lines(get_char, linelen, maxrollover);
+	get_char = align(get_char, linelen, maxrollover, ALIGN_CENTRE);
+	get_char = detab(get_char, linelen);
 
-	while ((c = (*detabed)()) != EOF)
+	while ((c = (*get_char)()) != EOF)
 		putchar(c);
 
 	return 0;
-} /* consistent line len */
+}

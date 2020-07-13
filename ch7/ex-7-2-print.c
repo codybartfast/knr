@@ -13,7 +13,7 @@
 #include "align.h"
 #include "detab.h"
 
-int tabsize = 4;
+int tabsize = 6;
 int linelen = 70;
 int maxrollover = 7;
 

@@ -14,7 +14,7 @@
 #include "detab.h"
 
 int tabsize = 6;
-int linelen = 70;
+int linelen = 76;
 int maxrollover = 7;
 
 int main(void)

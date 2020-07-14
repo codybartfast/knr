@@ -1,0 +1,134 @@
+{{KR2_Header|7.04|159|   Write a private version of <code>scanf</code> analogous to <code>minprintf</code> from the previous section.|__TOC__}}
+
+== Solution by [mailto:tomamundsen@gmail.com Thomas Amundsen] ==
+
+It seems that the real scanf doesn't handle floats and strings the way I expect it to. Having said that, the book's example of a rudimentary calculator on page 141 does not work on my machine.
+
+Here is a solution that only handles integers. 
+
+<c>
+/* Thomas Amundsen - K&R2 Exercise 7-4 - 2009-06-19 */
+
+#include <stdio.h>
+#include <stdarg.h>
+
+void minscanf(char *fmt, ...);
+
+int main()
+{
+  int i;
+
+  minscanf("%d", &i); /* scan integer from stdin */
+  printf("scanned %d\n", i); /* print scanning results to stdout */
+  
+  return 0;
+}
+
+/* minscanf: minimal scanf with variable argument list
+   only scans integers */
+void minscanf(char *fmt, ...)
+{
+  va_list ap; /* points to each unnamed arg in turn */
+  char *p;
+  int *ival;
+
+  va_start(ap, fmt); /* make ap point to 1st unnamed arg */
+
+  for (p = fmt; *p; p++) {
+
+    /* skip chars that aren't format conversions */
+    if (*p != '%')
+      continue;
+
+    /* prev char was %, look for format conversion */
+    switch(*++p) {
+    case 'd':
+      ival = va_arg(ap, int *); /* get integer pointer from args */
+      scanf("%d", ival); /* read integer into int pointer */
+      break;
+     default:
+      break;
+    }
+  }
+}
+</c>
+
+
+
+== Solution  by [[user:codybartfast|codybartfast]]  ([[K&R2 solutions:Ancillary:Category numbers|cat 0]]) ==
+
+Supports %d, %f, %s and %%.
+
+<c>
+#include <ctype.h>
+#include <stdarg.h>
+#include <stdlib.h>
+
+int minscanf(char *str, char *fmt, ...);
+
+int minscanf(char *str, char *fmt, ...)
+{
+	va_list ap;
+	int matched = 0;
+	char *p;
+
+	va_start(ap, fmt);
+	for (; *fmt; fmt++) {
+		if (isspace(*fmt))
+			continue;
+		for (; isspace(*str); str++)
+			;
+		if (*str == '\0')
+			break;
+		if (*fmt != '%') {
+			if (*fmt == *str) {
+				str++;
+				continue;
+			} else {
+				break;
+			}
+		}
+
+		switch (*++fmt) {
+		case 'd':
+			if (!isdigit(*str) && !((*str == '+' || *str == '-') &&
+						isdigit(*(str + 1))))
+				break;
+			*va_arg(ap, int *) = atoi(str);
+			str++;
+			while (isdigit(*str) && *str)
+				str++;
+			matched++;
+			continue;
+		case 'f':
+			*va_arg(ap, double *) = strtod(str, &p);
+			if (p == str)
+				break;
+			str = p;
+			matched++;
+			continue;
+		case 's':
+			if (isspace(*str) || !*str)
+				break;
+			p = va_arg(ap, char *);
+			while (!isspace(*str) && *str)
+				*p++ = *str++;
+			*p = '\0';
+			matched++;
+			continue;
+		case '%':
+			if (*str == '%') {
+				str++;
+				continue;
+			} else {
+				break;
+			}
+		default:
+			break;
+		}
+		break;
+	}
+	va_end(ap);
+	return matched;
+}
+</c>

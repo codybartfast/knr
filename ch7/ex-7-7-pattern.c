@@ -20,7 +20,10 @@ enum errors {
 	FILE_READ_ERROR
 };
 
-void parseargs(int argc, char **argv, int *x, int *n, char **ptn, int *fstpath);
+static void parseargs(int argc, char **argv, int *x, int *n, char **ptn,
+		      int *fstpath);
+static int find(FILE *file, char *path, char *pattern, int except, int number);
+static FILE *chkfopen(char *file, char *modes);
 static char *chkfgets(char *s, int n, FILE *iop, char *path);
 static void close(void);
 
@@ -28,43 +31,48 @@ static char errormsg[MAXLINE];
 
 int main(int argc, char *argv[])
 {
-	char *inpath;
-	FILE *infile;
+	int i, except, number, firstpath, found = 0;
+	char *pattern, *path, *modes = "r";
+	FILE *file;
 
-	char line[MAXLINE];
-	long lineno = 0;
-	int i, found = 0; /* no longer returned */
-
-	int except, number, firstpath;
-	char *pattern;
 	parseargs(argc, argv, &except, &number, &pattern, &firstpath);
 
-	inpath = "<stdin>";
-	infile = stdin;
-
-	printf("excapt: %d, number: %d, pattern: %s\n", except, number, pattern);
-	for (i = firstpath; i < argc; i++) {
-		printf("file: %s\n", argv[i]);
+	if (firstpath < argc) {
+		for (i = firstpath; i < argc; i++) {
+			path = argv[i];
+			file = chkfopen(path, modes);
+			found += find(file, path, pattern, except, number);
+		}
+	} else {
+		found = find(stdin, "<stdin>", pattern, except, number);
 	}
 
-	/* while ((chkfgets(line, MAXLINE, infile, inpath)) != NULL) {
+	close();
+	exit(NO_ERROR);
+}
+
+int find(FILE *file, char *path, char *pattern, int except, int number)
+{
+	char line[MAXLINE];
+	long lineno = 0, found = 0;
+
+	while ((chkfgets(line, MAXLINE, file, path)) != NULL) {
 		lineno++;
-		if ((strstr(line, *argv) != NULL) != except) {
+		if ((strstr(line, pattern) != NULL) != except) {
 			if (number)
 				printf("%ld:", lineno);
 			printf("%s", line);
 			found++;
 		}
-	} */
-	close();
-	exit(NO_ERROR);
+	}
+	return found;
 }
 
 void parseargs(int argc, char *argv[], int *x, int *n, char **ptn, int *fstpath)
 {
 	char c, *arg;
-	int ai = 1;
-	for (; ai < argc && (arg = argv[ai])[0] == '-'; ai++) {
+	int ai;
+	for (ai = 1; ai < argc && (arg = argv[ai])[0] == '-'; ai++) {
 		while ((c = *++arg)) {
 			switch (c) {
 			case 'x':

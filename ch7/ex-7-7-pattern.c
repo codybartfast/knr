@@ -24,12 +24,13 @@ void parseargs(int argc, char **argv, int *x, int *n, char **ptn, int *fstpath);
 static char *chkfgets(char *s, int n, FILE *iop, char *path);
 static void close(void);
 
-char *inpath;
-FILE *infile;
 static char errormsg[MAXLINE];
 
 int main(int argc, char *argv[])
 {
+	char *inpath;
+	FILE *infile;
+
 	char line[MAXLINE];
 	long lineno = 0;
 	int i, found = 0; /* no longer returned */
@@ -38,13 +39,15 @@ int main(int argc, char *argv[])
 	char *pattern;
 	parseargs(argc, argv, &except, &number, &pattern, &firstpath);
 
+	inpath = "<stdin>";
 	infile = stdin;
 
+	printf("excapt: %d, number: %d, pattern: %s\n", except, number, pattern);
 	for (i = firstpath; i < argc; i++) {
 		printf("file: %s\n", argv[i]);
 	}
 
-	while ((chkfgets(line, MAXLINE, infile, inpath)) != NULL) {
+	/* while ((chkfgets(line, MAXLINE, infile, inpath)) != NULL) {
 		lineno++;
 		if ((strstr(line, *argv) != NULL) != except) {
 			if (number)
@@ -52,7 +55,7 @@ int main(int argc, char *argv[])
 			printf("%s", line);
 			found++;
 		}
-	}
+	} */
 	close();
 	exit(NO_ERROR);
 }
@@ -109,6 +112,6 @@ char *chkfgets(char *s, int n, FILE *iop, char *path)
 
 void close(void)
 {
-	if (infile != NULL && infile != stdin)
-		fclose(infile);
+	/* 	if (infile != NULL && infile != stdin)
+		fclose(infile); */
 }

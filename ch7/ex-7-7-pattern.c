@@ -14,17 +14,22 @@
 
 enum errors {
 	NO_ERROR = 0,
-	NOTHING_FOUND,
 	ILLEGAL_OPTION,
 	NO_PATTERN,
 	FILE_OPEN_ERROR,
 	FILE_READ_ERROR
 };
 
-static void parseargs(int argc, char *argv[], int *except, int *number,
-		      int *name, char **pattern, int *firstpath);
-static int find(FILE *file, char *path, char *pattern, int except, int number,
-		int name);
+struct options {
+	int except;
+	int filename;
+	int number;
+	char *pattern;
+	int pathargs;
+};
+
+static void parseargs(int argc, char *argv[], struct options *);
+static int find(FILE *file, char *path, struct options *);
 static FILE *chkfopen(char *file, char *modes);
 static char *chkfgets(char *s, int n, FILE *iop, char *path);
 
@@ -32,37 +37,37 @@ static char errormsg[MAXLINE];
 
 int main(int argc, char *argv[])
 {
-	int i, except, lnnum, name, paths, found = 0;
-	char *pattern, *path, *modes = "r";
+	struct options options;
+	int i, found = 0;
+	char *path;
 	FILE *file;
 
-	parseargs(argc, argv, &except, &lnnum, &name, &pattern, &paths);
+	parseargs(argc, argv, &options);
 
-	if (paths < argc) {
-		for (i = paths; i < argc; i++) {
+	if (options.pathargs < argc)
+		for (i = options.pathargs; i < argc; i++) {
 			path = argv[i];
-			file = chkfopen(path, modes);
-			found += find(file, path, pattern, except, lnnum, name);
+			file = chkfopen(path, "r");
+			found += find(file, path, &options);
 			fclose(file);
 		}
-	} else {
-		found = find(stdin, "<stdin>", pattern, except, lnnum, name);
-	}
-	exit(found ? NO_ERROR : NOTHING_FOUND);
+	else
+		found = find(stdin, "<stdin>", &options);
+
+	exit(NO_ERROR);
 }
 
-int find(FILE *file, char *path, char *pattern, int except, int number,
-	 int name)
+int find(FILE *file, char *path, struct options *opts)
 {
 	char line[MAXLINE];
 	long lineno = 0, found = 0;
 
 	while ((chkfgets(line, MAXLINE, file, path)) != NULL) {
 		lineno++;
-		if ((strstr(line, pattern) != NULL) != except) {
-			if (name)
+		if ((strstr(line, opts->pattern) != NULL) != opts->except) {
+			if (opts->filename)
 				printf("%s:", path);
-			if (number)
+			if (opts->number)
 				printf("%ld:", lineno);
 			printf("%s", line);
 			found++;
@@ -71,37 +76,35 @@ int find(FILE *file, char *path, char *pattern, int except, int number,
 	return found;
 }
 
-void parseargs(int argc, char **argv, int *except, int *number, int *name,
-	       char **pattern, int *firstpath)
+void parseargs(int argc, char *argv[], struct options *options)
 {
 	char c, *arg;
 	int ai;
 
-	*except = *number = *name = 0;
-	for (ai = 1; ai < argc && (arg = argv[ai])[0] == '-'; ai++) {
-		while ((c = *++arg)) {
+	options->except = options->number = options->filename = 0;
+
+	for (ai = 1; ai < argc && (arg = argv[ai])[0] == '-'; ai++)
+		while ((c = *++arg))
 			switch (c) {
 			case 'x':
-				*except = 1;
+				options->except = 1;
 				break;
 			case 'n':
-				*number = 1;
+				options->number = 1;
 				break;
 			case 'f':
-				*name = 1;
+				options->filename = 1;
 				break;
 			default:
 				fprintf(stderr, "find: illegal option %c", c);
 				exit(ILLEGAL_OPTION);
 			}
-		}
-	}
 	if (ai == argc) {
 		fprintf(stderr, "Usage: find -x -n -f pattern\n");
 		exit(NO_PATTERN);
 	} else {
-		*pattern = argv[ai++];
-		*firstpath = ai;
+		options->pattern = argv[ai++];
+		options->pathargs = ai;
 	}
 }
 

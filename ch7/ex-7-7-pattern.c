@@ -12,8 +12,15 @@
 
 #define MAXLINE 1000
 
-enum errors { NO_ERROR = 0, FILE_OPEN_ERROR, FILE_READ_ERROR };
+enum errors {
+	NO_ERROR = 0,
+	ILLEGAL_OPTION,
+	NO_PATTERN,
+	FILE_OPEN_ERROR,
+	FILE_READ_ERROR
+};
 
+void parseargs(int argc, char **argv, int *x, int *n, char **ptn, int *fstpath);
 static char *chkfgets(char *s, int n, FILE *iop, char *path);
 static void close(void);
 
@@ -25,42 +32,57 @@ int main(int argc, char *argv[])
 {
 	char line[MAXLINE];
 	long lineno = 0;
-	int c, except = 0, number = 0;
-	int found = 0; /* not returned */
+	int i, found = 0; /* no longer returned */
+
+	int except, number, firstpath;
+	char *pattern;
+	parseargs(argc, argv, &except, &number, &pattern, &firstpath);
+
 	infile = stdin;
 
-	while (--argc > 0 && (*++argv)[0] == '-') {
-		while ((c = *++argv[0])) {
-			switch (c) {
-			case 'x':
-				except = 1;
-				break;
-			case 'n':
-				number = 1;
-				break;
-			default:
-				printf("find illegal option %c\n", c);
-				argc = 0;
-				found = -1;
-				break;
-			}
-		}
+	for (i = firstpath; i < argc; i++) {
+		printf("file: %s\n", argv[i]);
 	}
-	if (argc != 1) {
-		printf("Usage: find -x -n pattern\n");
-	} else {
-		while ((chkfgets(line, MAXLINE, infile, inpath)) != NULL) {
-			lineno++;
-			if ((strstr(line, *argv) != NULL) != except) {
-				if (number)
-					printf("%ld:", lineno);
-				printf("%s", line);
-				found++;
-			}
+
+	while ((chkfgets(line, MAXLINE, infile, inpath)) != NULL) {
+		lineno++;
+		if ((strstr(line, *argv) != NULL) != except) {
+			if (number)
+				printf("%ld:", lineno);
+			printf("%s", line);
+			found++;
 		}
 	}
 	close();
 	exit(NO_ERROR);
+}
+
+void parseargs(int argc, char *argv[], int *x, int *n, char **ptn, int *fstpath)
+{
+	char c, *arg;
+	int ai = 1;
+	for (; ai < argc && (arg = argv[ai])[0] == '-'; ai++) {
+		while ((c = *++arg)) {
+			switch (c) {
+			case 'x':
+				*x = 1;
+				break;
+			case 'n':
+				*n = 1;
+				break;
+			default:
+				fprintf(stderr, "find: illegal option %c", c);
+				exit(ILLEGAL_OPTION);
+			}
+		}
+	}
+	if (ai == argc) {
+		fprintf(stderr, "Usage: find -x -n pattern\n");
+		exit(NO_PATTERN);
+	} else {
+		*ptn = argv[ai++];
+		*fstpath = ai;
+	}
 }
 
 FILE *chkfopen(char *path, char *modes)

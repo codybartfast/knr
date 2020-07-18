@@ -1,0 +1,173 @@
+== Solution by [[user:codybartfast|codybartfast]]  ([[K&R2 solutions:Ancillary:Category numbers|Category 0]]) ==
+
+<ul>
+	<li>Adds <code>\n</code>'s to the last page of each file so the next file starts at the top of the next page.  Each page ends <br/>
+	on a line number that is a multiple of the page length, here 20.  E.g. the last file ends on line 160.</li>
+	<li>Doesn't print blank pages (e.g. if the last line of the file is on the last line of the page).</li>
+</ul>
+
+The following shows the result of paginating three source files with:
+<pre>paginate ex-7-8-paginate.c linenum.c ex-7-6-comp-basic.c | linenum</pre>
+<c>
+   1: # File: ex-7-8-paginate.c                                              Page    1
+   2: 
+   3: /*
+   4:  * Exercice 7-8.
+   5:  *
+   6:  * Write a program to print a set of files, starting each new one one new page,
+   7:  * with a title and a running page count for each file.
+   8:  */
+   9: 
+  10: #include <stdio.h>
+  11: #include <stdlib.h>
+  12: #include <string.h>
+  13: 
+  14: #define PAGELENGTH 20
+  15: #define MAXLINE 1000
+  16: 
+  17: enum error { NO_ERROR = 0, FILE_OPEN_ERROR, FILE_READ_ERROR };
+  18: 
+  19: void printfile(char *);
+  20: int printpages(char *path, FILE *file, int pagenum);
+  21: # File: ex-7-8-paginate.c                                              Page    2
+  22: 
+  23: static FILE *chkfopen(char *file, char *modes);
+  24: static char *chkfgets(char *s, int n, FILE *iop, char *path);
+  25: 
+  26: static char errormsg[MAXLINE];
+  27: 
+  28: int main(int argc, char *argv[])
+  29: {
+  30:   int i;
+  31: 
+  32:   for (i = 1; i < argc; i++)
+  33:           printfile(argv[i]);
+  34: 
+  35:   exit(NO_ERROR);
+  36: }
+  37: 
+  38: void printfile(char *path)
+  39: {
+  40:   int lnidx, i;
+  41: # File: ex-7-8-paginate.c                                              Page    3
+  42: 
+  43: 
+  44:   if ((lnidx = printpages(path, chkfopen(path, "r"), 1)))
+  45:           /* if not at top of page print '\n's to get to next page */
+  46:           for (i = PAGELENGTH - lnidx; i; i--)
+  47:                   putchar('\n');
+  48: }
+  49: 
+  50: int printpages(char *path, FILE *file, int pagenum)
+  51: {
+  52:   static char line[MAXLINE];
+  53:   int lnidx = 2;
+  54: 
+  55:   /* Don't print blank pages! */
+  56:   if (chkfgets(line, MAXLINE, file, path) == NULL)
+  57:           return 0;
+  58: 
+  59:   printf("# File: %-60.60s   Page %4d\n\n", path, pagenum);
+  60:   do {
+  61: # File: ex-7-8-paginate.c                                              Page    4
+  62: 
+  63:           printf("%s", line);
+  64:   } while (++lnidx < PAGELENGTH && chkfgets(line, MAXLINE, file, path));
+  65: 
+  66:   /* Add final \n if the file did not end with \n */
+  67:   if (line[strlen(line) - 1] != '\n')
+  68:           putchar('\n');
+  69: 
+  70:   return lnidx < PAGELENGTH ? lnidx : printpages(path, file, pagenum + 1);
+  71: }
+  72: 
+  73: FILE *chkfopen(char *path, char *modes)
+  74: {
+  75:   FILE *fp = fopen(path, modes);
+  76:   if (fp != NULL)
+  77:           return fp;
+  78:   sprintf(errormsg, "error: Failed to open file: '%s'", path);
+  79:   perror(errormsg);
+  80:   exit(FILE_OPEN_ERROR);
+  81: # File: ex-7-8-paginate.c                                              Page    5
+  82: 
+  83: }
+  84: 
+  85: char *chkfgets(char *s, int n, FILE *iop, char *path)
+  86: {
+  87:   char *r = fgets(s, n, iop);
+  88:   if (!ferror(iop))
+  89:           return r;
+  90:   sprintf(errormsg, "error: Failed to read file: '%s'", path);
+  91:   perror(errormsg);
+  92:   fclose(iop);
+  93:   exit(FILE_READ_ERROR);
+  94: }
+  95: 
+  96: 
+  97: 
+  98: 
+  99: 
+ 100: 
+ 101: # File: linenum.c                                                      Page    1
+ 102: 
+ 103: #include <stdio.h>
+ 104: #define LEN 1000
+ 105: 
+ 106: int main(void)
+ 107: {
+ 108:   char line[LEN];
+ 109:   int ln = 0;
+ 110: 
+ 111:   while (fgets(line, LEN, stdin))
+ 112:           printf("%4d: %s", ++ln, line);
+ 113:   return 0;
+ 114: } /* intentionally no final \n */
+ 115: 
+ 116: 
+ 117: 
+ 118: 
+ 119: 
+ 120: 
+ 121: # File: ex-7-6-comp-basic.c                                            Page    1
+ 122: 
+ 123: /*
+ 124:  * Exercise 7-6.
+ 125:  *
+ 126:  * Write a program to compare two files, printing the first line where they
+ 127:  * differ.
+ 128:  */
+ 129: 
+ 130: #include <stdio.h>
+ 131: #include <string.h>
+ 132: 
+ 133: #define MAXLINE (1 << 10)
+ 134: 
+ 135: int main(int argc, char *argv[])
+ 136: {
+ 137:   char line1[MAXLINE], line2[MAXLINE];
+ 138:   FILE *file1 = fopen(argv[1], "r"), *file2 = fopen(argv[2], "r");
+ 139:   char *rslt1, *rslt2;
+ 140:   int num = 0;
+ 141: # File: ex-7-6-comp-basic.c                                            Page    2
+ 142: 
+ 143: 
+ 144:   do {
+ 145:           num++;
+ 146:           rslt1 = fgets(line1, MAXLINE, file1);
+ 147:           rslt2 = fgets(line2, MAXLINE, file2);
+ 148:   } while (rslt1 && rslt2 && !strcmp(rslt1, rslt2));
+ 149: 
+ 150:   if (rslt1 != rslt2)
+ 151:           printf("line: %d\n< %s---\n> %s", num,
+ 152:                  rslt1 ? rslt1 : "<EOF>\n", rslt2 ? rslt2 : "<EOF>\n");
+ 153:   return 0;
+ 154: }
+ 155: 
+ 156: 
+ 157: 
+ 158: 
+ 159: 
+ 160:
+ </c>
+Latest code on [https://github.com/codybartfast/knr github]

@@ -1,0 +1,66 @@
+== Solution by [[user:codybartfast|codybartfast]] ==
+
+Similar to Greg's Implementation 1, my 'save space' version is:
+
+<c>
+static int sisupper(int c);
+
+int sisupper(int c)
+{
+	switch ('A') {
+	case 0x41: /* ASCII */
+		return 'A' <= c && c <= 'Z';
+	case 0xC1: /* EBCDIC */
+		return (('A' <= c && c <= 'I') || ('J' <= c && c <= 'R') ||
+			('S' <= c && c <= 'Z'));
+	default:
+		fprintf(stderr, "error: Can't guess encoding. 'A'=0x%X\n", 'A');
+		exit(1);
+	}
+}
+</c>
+Worst case this could result in a switch, 6 integer comparisions and 5 logic operations.
+
+I'm not sure how this affects performance but it's probably not good that there are perhaps 12 execution routes through the code.
+
+While this will take a trivial amount of (modern) processor time, it's easy to imagine this approach being relatively slow compared to a table lookup.
+
+Similar to Greg's Implementation 3, my 'save time' implementation is:
+<c>
+static int tisupper(int c);
+static int map[UCHAR_MAX];
+static void tisupper_init(void);
+
+int tisupper(int c)
+{
+	return *(map + (unsigned char)c);
+}
+
+void tisupper_init(void)
+{
+	int i;
+
+	for (i = 0; i < UCHAR_MAX; i++)
+		map[i] = sisupper(i);
+}
+</c>
+The speed of this should be consistent as there is only one execution path: <code>*(map + (unsigned char)c)</code>.
+
+On a 32/64bit computer I think it could take up more space as each member of the table needs to a separate memory address so it would occupy (UCHAR_MAX * wordsize) bits.  I.e. 2KB on a 64 bit machine.
+
+On the other hand Greg shows how using as mask allows at least 16 different attributes to be stored for each char.  This is supported by the truth value returned by the various <code>is()</code> functions:
+
+For my (gcc 8.3) implementation:
+<pre>
+iscntrl:       2
+ispunct:       4
+isalnum:       8
+isupper:     256
+islower:     512
+isalpha:   1,024
+isdigit:   2,048
+isxdigit:  4,096
+isspace:   8,192
+isprint:  16,384
+isgraph:  32,768
+</pre>

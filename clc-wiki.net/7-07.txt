@@ -126,4 +126,4 @@ char *chkfgets(char *s, int n, FILE *iop, char *path)
 	exit(FILE_READ_ERROR);
 }
 </c>
-Latest code on [https://github.com/codybartfast/knr github]
+<small>Latest code on [https://github.com/codybartfast/knr github]</small>

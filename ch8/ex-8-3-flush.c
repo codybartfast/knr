@@ -4,10 +4,10 @@
  * Design and write _flushbuf, fflush and fclose.
  */
 
-/**********
- *  FILE  *
- **********/
+#include <fcntl.h>
+#include <unistd.h>
 
+#undef NULL
 #define NULL 0
 #define EOF (-1)
 #define OPEN_MAX 20
@@ -19,19 +19,8 @@ typedef struct _iobuf {
 	int flag;
 	int fd;
 } FILE;
-extern FILE _iob[OPEN_MAX];
-
-#define stdin (&_iob[0])
-#define stdout (&_iob[1])
-#define stderr (&_iob[2])
 
 enum flags { _READ = 01, _WRITE = 02, _UNBUF = 04, _EOF = 010, _ERR = 020 };
-
-FILE *fopen(char *name, char *mode);
-int _fillbuf(FILE *);
-int _flushbuf(int, FILE *);
-int fflush(FILE *);
-int fclose(FILE *);
 
 #define feof(p) (((p)->flag & _EOF) != 0)
 #define ferror(p) (((p)->flag & _ERR) != 0)
@@ -43,12 +32,20 @@ int fclose(FILE *);
 #define getchar() getc(stdin)
 #define putchar(x) putc(x, stdout)
 
+#define stdin (&_iob[0])
+#define stdout (&_iob[1])
+#define stderr (&_iob[2])
+
 FILE _iob[OPEN_MAX] = { { 0, (char *)0, (char *)0, _READ, 0 },
 			{ 0, (char *)0, (char *)0, _WRITE, 1 },
 			{ 0, (char *)0, (char *)0, _WRITE | _UNBUF, 2 } };
 
-#include <fcntl.h>
-#include <unistd.h>
+FILE *fopen(char *name, char *mode);
+int _fillbuf(FILE *);
+int _flushbuf(int, FILE *);
+int fflush(FILE *);
+int fclose(FILE *);
+
 #define PERMS 0666
 
 FILE *fopen(char *name, char *mode)

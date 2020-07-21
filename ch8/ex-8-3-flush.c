@@ -43,22 +43,9 @@ int fclose(FILE *);
 #define getchar() getc(stdin)
 #define putchar(x) putc(x, stdout)
 
-/**************************
- *  stdin, stdou, stderr  *
- **************************/
-#define BUFSIZE 1024
-
-char stdinbuf[BUFSIZE];
-char stdoutbuf[BUFSIZE];
-char stderrbuf[BUFSIZE];
-
-FILE _iob[OPEN_MAX] = { { 0, (char *)0, stdinbuf, _READ, 0 },
-			{ 0, (char *)0, stdoutbuf, _WRITE, 1 },
-			{ 0, (char *)0, stderrbuf, _WRITE | _UNBUF, 2 } };
-
-/***********
- *  fopen  *
- ***********/
+FILE _iob[OPEN_MAX] = { { 0, (char *)0, (char *)0, _READ, 0 },
+			{ 0, (char *)0, (char *)0, _WRITE, 1 },
+			{ 0, (char *)0, (char *)0, _WRITE | _UNBUF, 2 } };
 
 #include <fcntl.h>
 #include <unistd.h>
@@ -94,11 +81,8 @@ FILE *fopen(char *name, char *mode)
 	return fp;
 }
 
-/**************
- *  _fillbuf  *
- **************/
-
 #include <stdlib.h>
+#define BUFSIZE 1024
 
 int _fillbuf(FILE *fp)
 {
@@ -123,10 +107,6 @@ int _fillbuf(FILE *fp)
 	return (unsigned char)*fp->ptr++;
 }
 
-/**************
- *  _fillbuf  *
- **************/
-
 int _flushbuf(int c, FILE *fp)
 {
 	if ((fp->flag & (_WRITE | _EOF | _ERR)) != _WRITE)
@@ -144,15 +124,12 @@ int _flushbuf(int c, FILE *fp)
 	return 0;
 }
 
-/************
- *  fflush  *
- ************/
-
 int fflush(FILE *fp)
 {
 	int bufsize;
 
 	if (fp == NULL) {
+		/* flush all open streams */
 		int i, rslt = 0;
 		for (i = 0; i < OPEN_MAX; i++)
 			if ((fp = &_iob[i])->flag & (_READ | _WRITE))
@@ -163,7 +140,7 @@ int fflush(FILE *fp)
 	if ((fp->flag & (_WRITE | _EOF | _ERR)) != _WRITE)
 		return EOF;
 	if (fp->base == NULL)
-		return EOF;
+		return 0;
 	bufsize = (fp->flag & _UNBUF) ? 1 : BUFSIZE;
 	if (write(fp->fd, fp->base, bufsize - fp->cnt) < 0) {
 		fp->flag |= _ERR;
@@ -174,10 +151,6 @@ int fflush(FILE *fp)
 	return 0;
 }
 
-/************
- *  fclose  *
- ************/
-
 int fclose(FILE *fp)
 {
 	if (fp == NULL)
@@ -185,41 +158,52 @@ int fclose(FILE *fp)
 	if (fp->flag & _WRITE)
 		if (fflush(fp))
 			return EOF;
-	if (fp->fd <= 2)
-		return 0;
-	fp->flag = 0; /* mark as unused */
 	free(fp->base);
 	fp->base = NULL;
+	if (fp->fd <= 2)
+		return 0;
+	fp->flag &= ~(_READ | _WRITE); /* mark as unused */
 	return close(fp->fd);
 }
 
-/*****************
- *  main (copy)  *
- *****************/
-
 int main(int argc, char *argv[])
 {
-	FILE *from, *to;
-	char c;
+	FILE *source, *temp;
+	char c, *spath, *tpath;
 
 	if (argc != 3) {
 		write(2, &"error: Expect 3 args!\n", 22);
 		return 1;
 	}
-	if ((from = fopen(argv[1], "r")) == NULL) {
+	spath = argv[1];
+	tpath = argv[2];
+
+	if ((source = fopen(spath, "r")) == NULL) {
 		write(2, &"error: failed to open source!\n", 30);
 		return 1;
 	}
-	if ((to = fopen(argv[2], "w")) == NULL) {
-		write(2, &"error: failed to open target!\n", 30);
+	if ((temp = fopen(tpath, "w")) == NULL) {
+		write(2, &"error: failed to open temp to write!\n", 37);
 		return 1;
 	}
 
-	while ((c = getc(from)) != EOF)
+	/* copy from source to temp */
+	while ((c = getc(source)) != EOF)
+		putc(c, temp);
+
+	fclose(source);
+	fclose(temp);
+
+	if ((temp = fopen(tpath, "r")) == NULL) {
+		write(2, &"error: failed to open temp to read!\n", 36);
+		return 1;
+	}
+
+	/* copy from temp to stdout */
+	while ((c = getc(temp)) != EOF)
 		putchar(c);
 
 	fflush(NULL);
-	fclose(from);
-	fclose(to);
+
 	return 0;
 }

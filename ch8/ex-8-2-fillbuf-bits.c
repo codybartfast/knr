@@ -17,11 +17,7 @@ typedef struct _iobuf {
 	int cnt;
 	char *ptr;
 	char *base;
-	int read;
-	int write;
-	int unbuf;
-	int eof;
-	int err;
+	int flag;
 	int fd;
 } FILE;
 extern FILE _iob[OPEN_MAX];
@@ -29,6 +25,8 @@ extern FILE _iob[OPEN_MAX];
 #define stdin (&_iob[0])
 #define stdout (&_iob[1])
 #define stderr (&_iob[2])
+
+enum flags { _READ = 01, _WRITE = 02, _UNBUF = 04, _EOF = 010, _ERR = 020 };
 
 FILE *fopen(char *name, char *mode);
 int _fillbuf(FILE *);
@@ -39,7 +37,7 @@ int _flushbuf(int, FILE *);
 #define fileno(p) ((p)->fd)
 
 #define getc(p) (--(p)->cnt >= 0 ? (unsigned char)*(p)->ptr++ : _fillbuf(p))
-#define putc(x, p) write(p->fd, &x, 1);
+#define putc(x, p) (--(p)->cnt >= 0 ? *(p)->ptr++ = (x) : _flushbuf((x), p))
 
 #define getchar() getc(stdin)
 #define putchar(x) putc(x, stdout)
@@ -60,10 +58,11 @@ FILE *fopen(char *name, char *mode)
 	if (*mode != 'r' && *mode != 'w' && *mode != 'a')
 		return NULL;
 	for (fp = _iob; fp < _iob + OPEN_MAX; fp++)
-		if (!fp->read && !fp->write)
+		if ((fp->flag & (_READ | _WRITE)) == 0)
 			break;
 	if (fp >= _iob + OPEN_MAX)
 		return NULL;
+
 	if (*mode == 'w')
 		fd = creat(name, PERMS);
 	else if (*mode == 'a') {
@@ -77,9 +76,7 @@ FILE *fopen(char *name, char *mode)
 	fp->fd = fd;
 	fp->cnt = 0;
 	fp->base = NULL;
-	fp->read = (*mode == 'r');
-	fp->write = !fp->read;
-	fp->unbuf = fp->eof = fp->err = 0;
+	fp->flag = (*mode == 'r') ? _READ : _WRITE;
 	return fp;
 }
 
@@ -94,9 +91,9 @@ int _fillbuf(FILE *fp)
 {
 	int bufsize;
 
-	if (!fp->read || fp->eof || fp->err)
+	if ((fp->flag & (_READ | _EOF | _ERR)) != _READ)
 		return EOF;
-	bufsize = fp->unbuf ? 1 : BUFSIZE;
+	bufsize = (fp->flag & _UNBUF) ? 1 : BUFSIZE;
 	if (fp->base == NULL)
 		if ((fp->base = (char *)malloc(bufsize)) == NULL)
 			return EOF;
@@ -104,9 +101,9 @@ int _fillbuf(FILE *fp)
 	fp->cnt = read(fp->fd, fp->ptr, bufsize);
 	if (--fp->cnt < 0) {
 		if (fp->cnt == -1)
-			fp->eof = 1;
+			fp->flag |= _EOF;
 		if (fp->cnt == -2)
-			fp->err = 1;
+			fp->flag |= _ERR;
 		fp->cnt = 0;
 		return EOF;
 	}
@@ -117,9 +114,9 @@ int _fillbuf(FILE *fp)
  *  stdin, stdou, stderr  *
  **************************/
 
-FILE _iob[OPEN_MAX] = { { 0, (char *)0, (char *)0, 1, 0, 0, 0, 0, 0 },
-			{ 0, (char *)0, (char *)0, 0, 1, 0, 0, 0, 1 },
-			{ 0, (char *)0, (char *)0, 0, 1, 1, 0, 0, 2 } };
+FILE _iob[OPEN_MAX] = { { 0, (char *)0, (char *)0, _READ, 0 },
+			{ 0, (char *)0, (char *)0, _WRITE, 1 },
+			{ 0, (char *)0, (char *)0, _WRITE | _UNBUF, 2 } };
 
 /****************
  *  main (cat)  *
@@ -128,33 +125,13 @@ FILE _iob[OPEN_MAX] = { { 0, (char *)0, (char *)0, 1, 0, 0, 0, 0, 0 },
 int main(int argc, char *argv[])
 {
 	FILE *fp;
-	char c;
+	char  c;
 
 	while (--argc > 0)
 		if ((fp = fopen(*++argv, "r")) == NULL)
 			return 1;
 		else
 			while ((c = getc(fp)) != EOF)
-				putchar(c);
+				write(1, &c, 1);
 	return 0;
 }
-
-/*
-
-Either of them is at least 100 times (10,000%) slower than linux cat.
-
-TIME    | cat times (s/2MB)     | Avrg  | %
---------|-----------------------|-------|-------
-bits:   |21.773, 22.342, 22.393 |22.169 |
-fields: |23.242, 23.218, 25.834 |16.655 | +8.7%
-
-Fields resulted in an absolute increase of 1.8% in the size of the binary.
-If you look at size of the programs over a 'minimal' program it is 26.5% bigger.
-
-SIZE    | Abs   | %     | Extra | %
---------|-------|-------|-------|-------
-minimal:|16,472 |       |       |
-bits:   |17,648 |       |+1,176 |
-fields: |17,960 | +1.8% |+1,488 |+26.5%
-
-*/

@@ -1,11 +1,19 @@
 /*
- * Exercise 8-3.
+ * Exercise 8-4.
  *
- * Design and write _flushbuf, fflush and fclose.
+ * The standard library function
+ *
+ * 	int fseek(FILE *fp, long offset, int origin)
+ *
+ * is identical to lseek except that fp is a file pointer instead of a file
+ * descriptor and the return value is an int status, not a position.  Write
+ * fseek.  Make sure that your fseek coordinates properly with the buffering
+ * done for the other functions of the library.
  */
 
 #include <fcntl.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 
 #undef NULL
@@ -48,11 +56,32 @@ FILE _iob[OPEN_MAX] = { { 0, (char *)0, (char *)0, _READ, 0, 0 },
 FILE *fopen(char *name, char *mode);
 int fflush(FILE *);
 int fclose(FILE *);
+int fseek(FILE *fp, long offset, int origin);
 static int _fillbuf(FILE *);
 static int _flushbuf(int, FILE *);
 
 #define BUFSIZE 1024
 #define PERMS 0666
+
+int fseek(FILE *fp, long offset, int origin)
+{
+	if (fp == NULL || !isopen(fp))
+		return EOF;
+	if (fp->flag & _WRITE) {
+		if (fflush(fp))
+			return EOF;
+	} else {
+		offset -= (origin == SEEK_CUR) ? fp->cnt : 0L;
+		fp->cnt = 0;
+	}
+	if (lseek(fp->fd, offset, origin) == -1) {
+		fp->flag |= _ERR;
+		return EOF;
+	} else {
+		fp->flag &= ~_EOF;
+		return 0;
+	}
+}
 
 int fflush(FILE *fp)
 {
@@ -166,45 +195,69 @@ int _fillbuf(FILE *fp)
 	return (unsigned char)*fp->ptr++;
 }
 
-int main(int argc, char *argv[])
+int main(void)
 {
-	FILE *source, *temp;
-	char c, *spath, *tpath;
+	FILE *temp;
+	int i;
+	char c, *s, tpath[] = "temp-8-4.txt";
+	char draft[] = "My Ham is Green and I like to Eat it.\n";
 
-	if (argc != 3) {
-		write(2, "error: Expect 3 args!\n", 22);
-		return 1;
-	}
-	spath = argv[1];
-	tpath = argv[2];
+	write(1, "Started with:  ", 15);
+	write(1, draft, 38);
 
-	if ((source = fopen(spath, "r")) == NULL) {
-		write(2, "error: failed to open source!\n", 30);
-		return 1;
-	}
-
+	/* Write draft text to temp file */
 	if ((temp = fopen(tpath, "w")) == NULL) {
 		write(2, "error: failed to open temp to write!\n", 37);
 		return 1;
 	}
+	for (s = draft; *s; s++)
+		putc(*s, temp);
 
-	/* copy from source to temp */
-	while ((c = getc(source)) != EOF)
-		putc(c, temp);
+	/* edit the temp file */
+	fseek(temp, 3L, SEEK_SET);
+	for (s = "Dog"; *s; s++)
+		putc(*s, temp);
 
-	fclose(source);
+	fseek(temp, 4L, SEEK_CUR);
+	for (s = "Beige"; *s; s++)
+		putc(*s, temp);
+
+	fseek(temp, -8L, SEEK_END);
+	for (s = "Pat"; *s; s++)
+		putc(*s, temp);
+
 	fclose(temp);
 
+	write(1, "Ended with:    ", 15);
+
+	/* read temp file and write to stdout */
 	if ((temp = fopen(tpath, "r")) == NULL) {
 		write(2, "error: failed to open temp to read!\n", 36);
 		return 1;
 	}
+	while ((c = getc(temp)) != EOF)
+		putchar(c);
+	fflush(stdout);
 
-	/* copy from temp to stdout */
+
+	/* fseek with read and SEEK_CUR */
+	fseek(temp, 0, SEEK_SET);
+	write(1, "Read SEEK_CUR: ", 15);
+	for (i = 0; i < 22; i++)
+		putchar(getc(temp));
+	fseek(temp, 8L, SEEK_CUR);
 	while ((c = getc(temp)) != EOF)
 		putchar(c);
 
-	fflush(NULL);
-
+	fclose(stdout);
+	fclose(temp);
 	return 0;
 }
+
+/*
+
+Started with:  My Ham is Green and I like to Eat it.
+Ended with:    My Dog is Beige and I like to Pat it.
+Read SEEK_CUR: My Dog is Beige and I Pat it.
+
+*/

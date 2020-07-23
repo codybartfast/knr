@@ -1,0 +1,108 @@
+== Solution by [[user:codybartfast|codybartfast]]  ([[K&R2 solutions:Ancillary:Category numbers|cat 0]]) ==
+Thanks to Gregory for his second solution, I wouldn't have realised there were (at least)<br/>
+two bugs in my original code without it.
+<c>
+#define isopen(p) ((p)->flag & (_READ | _WRITE))
+
+int fseek(FILE *fp, long offset, int origin)
+{
+	if (fp == NULL || !isopen(fp))
+		return EOF;
+	if (fp->flag & _WRITE) {
+		if (fflush(fp))
+			return EOF;
+	} else {
+		offset -= (origin == SEEK_CUR) ? fp->cnt : 0L;
+		fp->cnt = 0;
+	}
+	if (lseek(fp->fd, offset, origin) == -1) {
+		fp->flag |= _ERR;
+		return EOF;
+	} else {
+		fp->flag &= ~_EOF;
+		return 0;
+	}
+}
+</c>
+The following program uses fseek to edit text in a file.  Then the last part creates a<br/> 
+shorter sentence using <code>fseek</code> with <code>SEEK_CUR</code> while reading.  This last part wouldn't<br/>
+have worked with my orignal code because, as Gregory's second version implies:
+<ul>
+<li>when the origin is <code>SEEK_CUR</code> the current position should be interpreted as the <br/>
+position after the last charcter provided to the user, not the current position of <br/>
+the underlying file descriptor,</li>
+<li>the <code>EOF</code> flag should be cleared if we're no longer at the end of the file after seeking.</li>
+</ul>
+I <i>think</i> that to properly handle <code>EOF</code>, the <code>FILE</code> would need to contain the current<br/>
+absolute position and the length of the file (so we know whether our current position<br/>
+is the end of the file).  If we did maintain that information then there are other<br/>
+optimizations (other than the one in Gregor's second version) because we could know<br/>
+whether locations relative to the start or end were already in our buffer.
+<c>
+int main(void)
+{
+	FILE *temp;
+	int i;
+	char c, *s, tpath[] = "temp-8-4.txt";
+	char draft[] = "My Ham is Green and I like to Eat it.\n";
+
+	write(1, "Started with:  ", 15);
+	write(1, draft, 38);
+
+	/* Write draft text to temp file */
+	if ((temp = fopen(tpath, "w")) == NULL) {
+		write(2, "error: failed to open temp to write!\n", 37);
+		return 1;
+	}
+	for (s = draft; *s; s++)
+		putc(*s, temp);
+
+	/* edit the temp file */
+	fseek(temp, 3L, SEEK_SET);
+	for (s = "Dog"; *s; s++)
+		putc(*s, temp);
+
+	fseek(temp, 4L, SEEK_CUR);
+	for (s = "Beige"; *s; s++)
+		putc(*s, temp);
+
+	fseek(temp, -8L, SEEK_END);
+	for (s = "Pat"; *s; s++)
+		putc(*s, temp);
+
+	fclose(temp);
+
+	write(1, "Ended with:    ", 15);
+
+	/* read temp file and write to stdout */
+	if ((temp = fopen(tpath, "r")) == NULL) {
+		write(2, "error: failed to open temp to read!\n", 36);
+		return 1;
+	}
+	while ((c = getc(temp)) != EOF)
+		putchar(c);
+	fflush(stdout);
+
+
+	/* fseek with read and SEEK_CUR */
+	fseek(temp, 0, SEEK_SET);
+	write(1, "Read SEEK_CUR: ", 15);
+	for (i = 0; i < 22; i++)
+		putchar(getc(temp));
+	fseek(temp, 8L, SEEK_CUR);
+	while ((c = getc(temp)) != EOF)
+		putchar(c);
+
+	fclose(stdout);
+	fclose(temp);
+	return 0;
+}
+</c>
+Output:
+<pre>
+Started with:  My Ham is Green and I like to Eat it.
+Ended with:    My Dog is Beige and I like to Pat it.
+Read SEEK_CUR: My Dog is Beige and I Pat it.
+</pre>
+This output is the same as when using <code>stdio.h</code>.<br/>
+<small>Full code on [https://github.com/codybartfast/knr github]</small>

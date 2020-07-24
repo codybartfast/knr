@@ -1,2 +1,1 @@
-cc ex-8-5-fsize.c && a.out ..
-
+cc ex-8-5-fsize.c && a.out

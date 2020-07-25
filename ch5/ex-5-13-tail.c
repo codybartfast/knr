@@ -1,225 +1,167 @@
-/*
- * Exercise 5-13
- *
- * Write the program tail, which prints the last n lines of its input.  By
- * default, n is 10, let us say, but it can be changed by an optional
- * argument, so that
- *
- * 	tail -n
- *
- * prints the last n lines.  The program should behave rationally no matter
- * how unreasonable the input or the value of n.  Write the program so it
- * makes the best use of available storage; lines should be stored as in the
- * sorting program of Section 5.6, not in a two-dimensional array of fixed
- * size.
- */
-
-#include <ctype.h>
-#include <limits.h>
-#include <stddef.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include <stdlib.h>
+#include <unistd.h>
 
-#define INITIAL_BUFFSIZE (1 << 10)
-#define DEFAULT_TAILSIZE 10
+#define BUFSIZE BUFSIZ
 
-enum { OK, ERROR };
+typedef struct block {
+	char *buff;
+	int used;
+	int nl_count;
+	struct block *next;
+	struct block *prev;
+} Block;
 
-/* Single buffer to store characters, loops back to start on reaching limit */
-unsigned long buffsize;
-unsigned long maxbuffsize = ULONG_MAX;
-char *buff, *cursor, *bufflimit;
+Block *readfile(Block *, int nl_target);
+int readblock(Block *block);
+Block *newblock(void);
+void insertblock(Block *);
+int finalnl(Block *);
+Block *seekstart(Block *, int nl_rqstd, int *start);
+void error(char *fmt, ...);
 
-/* max number of lines to print */
-unsigned long tailsize;
-/* pointers to the start of lines in the buffer, loops back start at limit */
-char **lines, **firstln, **currln, **lineslimit;
+int block_count = 1;
+int nl_total = 0;
 
-int readlines(void);
-void writelines(void);
-int init_buff(unsigned long);
-int init_lines(void);
-int enlargebuff(void);
-int settailsize(int argc, char **argv);
-
-int main(int argc, char **argv)
+int main(void)
 {
-	if (settailsize(argc, argv) != OK)
-		return 0;
-	if (tailsize == 0)
-		return 0;
-	if (init_buff(INITIAL_BUFFSIZE) != OK)
-		return 0;
-	if (init_lines() != OK) {
-		free(buff);
-		return 0;
+	int lines_rqstd = 10;
+	int nl_target = lines_rqstd + 1;
+	int start;
+
+	Block *lastblock, *block = newblock();
+	block->next = block->prev = block;
+
+	lastblock = readfile(block, nl_target);
+
+	if (!finalnl(lastblock))
+		nl_target--;
+
+	block = seekstart(lastblock, nl_target, &start);
+
+	write(STDOUT_FILENO, block->buff + start, block->used - start);
+
+	while (block != lastblock) {
+		block = block->next;
+		write(STDOUT_FILENO, block->buff, block->used);
 	}
-
-	if (readlines() == OK)
-		writelines();
-
-	free(lines);
-	free(buff);
 	return 0;
 }
 
-int readlines(void)
+Block *readfile(Block *block, int nl_target)
 {
-	int c, prevc = '\0';
+	int nread, i;
+	char *p;
+	register int nl_count = 0;
 
-	while ((c = getchar()) != EOF) {
-		if (prevc == '\n') {
-			if (++currln == lineslimit)
-				currln = lines;
-			*currln = cursor;
-			if (currln == firstln)
-				if (++firstln == lineslimit)
-					firstln = lines;
+	while (1) {
+		/* Invariants?
+		   - 'block' is free to be filled
+		   - not encountered EOF */
+
+		/* try to fill the block */
+		while (block->used < BUFSIZE &&
+		       0 < (nread = read(STDIN_FILENO,
+					 block->buff + block->used,
+					 BUFSIZE - block->used))) {
+			block->used += nread;
 		}
-		*cursor = prevc = c;
-		if (++cursor == bufflimit)
-			cursor = buff;
-		if (cursor == *firstln) {
-			if (enlargebuff() != OK)
-				return ERROR;
+		if (nread < 0)
+			error("error reading input.");
+
+		/* count newlines in block */
+		for (i = block->used, p = block->buff; i > 0; i--)
+			nl_count += (*p++ == '\n');
+		block->nl_count = nl_count;
+		nl_total += nl_count;
+
+		/* more input? */
+		if (nread > 0) {
+			/* prepare next block */
+			if (nl_total - block->next->nl_count < nl_target)
+				insertblock(block);
+			block = block->next;
+			nl_total -= block->nl_count;
+			block->used = 0;
+			nl_count = block->nl_count = 0;
+		} else {
+			return block;
 		}
 	}
-	return OK;
 }
 
-void writelines(void)
+Block *newblock(void)
 {
-	char *bptr;
+	Block *b = malloc(sizeof(Block));
 
-	if (*firstln <= cursor) {
-		for (bptr = *firstln; bptr < cursor; bptr++)
-			putchar(*bptr);
+	if (b == NULL)
+		error("error: no memory - Block");
+	b->buff = malloc(BUFSIZE);
+	if (b->buff == NULL)
+		error("error: no memory - buff");
+	b->used = 0;
+	b->nl_count = 0;
+	return b;
+}
+
+void insertblock(Block *block)
+{
+	Block *inter;
+
+	inter = newblock();
+	if (inter == NULL)
+		error("error: no memory - inter");
+	block_count++;
+	block->next->prev = inter;
+	inter->next = block->next;
+	inter->prev = block;
+	block->next = inter;
+}
+
+int finalnl(Block *block)
+{
+	char lastchar = 0;
+
+	if (block->used)
+		lastchar = *(block->buff + block->used - 1);
+	else if (block_count > 1)
+		lastchar = *(block->prev->buff + BUFSIZE - 1);
+	return lastchar == '\n';
+}
+
+Block *seekstart(Block *block, int nl_rqstd, int *start)
+{
+	int blkcount = block_count;
+	char *p;
+
+	/* find block with first line or first block */
+	while (block->nl_count < nl_rqstd && --blkcount) {
+		nl_rqstd -= block->nl_count;
+		block = block->prev;
+	}
+
+	/* fewer lines than requested? */
+	if (block->nl_count < nl_rqstd) {
+		*start = 0;
 	} else {
-		for (bptr = *firstln; bptr < bufflimit; bptr++)
-			putchar(*bptr);
-		for (bptr = buff; bptr < cursor; bptr++)
-			putchar(*bptr);
+		p = block->buff + block->used;
+		while (nl_rqstd > 0)
+			if (*--p == '\n')
+				nl_rqstd--;
+		*start = (p - block->buff) + 1;
 	}
+	return block;
 }
 
-int init_buff(unsigned long size)
+void error(char *fmt, ...)
 {
-	buffsize = size;
-	buff = malloc(buffsize * sizeof(char));
-	if (buff == NULL) {
-		printf("error: Insufficient memory (allocating buff)\n");
-		return ERROR;
-	}
-	cursor = buff;
-	bufflimit = buff + buffsize;
-	return OK;
-}
+	va_list args;
 
-int init_lines(void)
-{
-	lines = malloc(tailsize * sizeof(char *));
-	if (lines == NULL) {
-		printf("error: Insufficient memory (allocating lines)\n");
-		return ERROR;
-	}
-	firstln = currln = lines;
-	*lines = buff;
-	lineslimit = lines + tailsize;
-	return OK;
-}
-
-int enlargebuff(void)
-{
-	unsigned long used;
-	char *bptr, **lptr;
-	ptrdiff_t offset;
-
-	/* copy info about current buffer before it's replaced */
-	char *pbuff = buff, *pcursor = cursor, *pbufflimit = bufflimit;
-	char *pfirstchr = *firstln;
-	ptrdiff_t pfirst2limit = pbufflimit - pfirstchr;
-
-	if (buffsize == maxbuffsize) {
-		printf("error: Cannot increase buffer size beyond %ld\n",
-		       buffsize);
-		return ERROR;
-	}
-
-	/* replace buff */
-	buffsize = buffsize > maxbuffsize / 4 ? maxbuffsize : buffsize * 4;
-	if (init_buff(buffsize) != OK) {
-		return ERROR;
-	}
-
-	/* copy data from previous buff to new buff */
-	if (pfirstchr < pcursor) {
-		for (bptr = pfirstchr; bptr < pcursor;)
-			*cursor++ = *bptr++;
-		used = pcursor - pfirstchr;
-	} else {
-		for (bptr = pfirstchr; bptr < pbufflimit;)
-			*cursor++ = *bptr++;
-		for (bptr = pbuff; bptr < pcursor;)
-			*cursor++ = *bptr++;
-		used = pfirst2limit + (pcursor - pbuff);
-	}
-
-	/* update line pointers to point to lines' new positions in new buff,
-	   may copy uninitialised values */
-	for (lptr = lines; lptr < lineslimit; lptr++) {
-		offset = *lptr >= pfirstchr ? *lptr - pfirstchr :
-					      pfirst2limit + (*lptr - pbuff);
-		*lptr = buff + offset;
-	}
-
-	/* set cursor for new buff */
-	cursor = buff + used;
-
-	free(pbuff);
-	return OK;
-}
-
-int settailsize(int argc, char **argv)
-{
-	char c, *ptr;
-	unsigned int d;
-	unsigned long n = 0;
-	unsigned long max = ULONG_MAX;
-
-	if (argc <= 1) {
-		tailsize = DEFAULT_TAILSIZE;
-	} else if (argc == 2 && *argv[1] == '-') {
-		ptr = argv[1] + 1;
-		if (*ptr == '\0') /* match behaviour of linux tail */
-			n = DEFAULT_TAILSIZE;
-		while ((c = *ptr++) != '\0') {
-			if (!isdigit(c)) {
-				printf("error: Expected decimal integer: %s\n",
-				       argv[1] + 1);
-				return ERROR;
-			}
-			if (n > (max / 10)) {
-				printf("error: Argument too large, max: %lu\n",
-				       max);
-				return ERROR;
-			}
-			n *= 10;
-			d = (c - '0');
-			if (d > max - n) {
-				printf("error: Argument too large, max: %lu\n",
-				       max);
-				return ERROR;
-			}
-			n += d;
-		}
-		tailsize = n;
-	} else if (argc == 2) {
-		printf("error: Expected argument to begin with '-'\n");
-		return ERROR;
-	} else {
-		printf("error: Expected at most one argument, got %d.\n",
-		       argc - 1);
-		return ERROR;
-	}
-	return OK;
+	va_start(args, fmt);
+	fprintf(stderr, "error: ");
+	vfprintf(stderr, fmt, args);
+	fprintf(stderr, "\n");
+	va_end(args);
+	exit(1);
 }
